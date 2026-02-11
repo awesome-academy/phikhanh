@@ -1,0 +1,2 @@
+# Folder chứa tất cả file upload (images, documents, etc.)
+# Git sẽ giữ folder này nhưng ignore tất cả file bên trong
