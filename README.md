@@ -1,12 +1,13 @@
 # Public Service Management System
 
-A hybrid system with REST API for users and SSR for admin dashboard.
+Hệ thống quản lý dịch vụ công với kiến trúc hybrid: REST API cho user và SSR cho admin.
 
-## Tech Stack
-- Go 1.21
-- Gin Framework
-- GORM
-- PostgreSQL
+## Công nghệ sử dụng
+- **Go** 1.21+
+- **Gin Framework** - Web framework
+- **GORM** - ORM
+- **PostgreSQL** - Database
+- **Swagger** - API Documentation
 
 ## Project Structure
 ```
@@ -54,13 +55,74 @@ cp .env.example .env
 go run main.go
 ```
 
-## API Endpoints
+## API Documentation
 
-### User API (JSON)
+### Cho Frontend Developer:
+
+**Xem API Documentation (không cần run app):**
+- File Swagger: `/docs/swagger.yaml`
+- Import vào Swagger Editor: https://editor.swagger.io/
+- Hoặc dùng Postman: Import file `docs/swagger.yaml`
+
+**Online Swagger UI (khi app đang chạy):**
+- URL: http://localhost:8080/docs/index.html
+- Swagger JSON: http://localhost:8080/docs/doc.json
+
+### API Endpoints
+
+#### Auth
+- `POST /api/v1/auth/register` - Đăng ký tài khoản
+- `POST /api/v1/auth/login` - Đăng nhập
+- `POST /api/v1/auth/logout` - Đăng xuất (cần token)
+
+#### Profile
+- `GET /api/v1/profile` - Lấy thông tin profile (cần token)
+- `PUT /api/v1/profile` - Cập nhật profile (cần token)
+
+#### Health
 - `GET /api/v1/health` - Health check
 
-### Admin (SSR)
-- `GET /admin/dashboard` - Admin dashboard
+### Response Format
+
+**Success Response:**
+```json
+{
+  "status": 200,
+  "message": "Success message",
+  "data": { }
+}
+```
+
+**Error Response:**
+```json
+{
+  "status": 400,
+  "message": "Error message"
+}
+```
+
+### Status Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | OK - Request successful |
+| 201 | Created - Resource created |
+| 400 | Bad Request - Validation error |
+| 401 | Unauthorized - Authentication failed |
+| 404 | Not Found - Resource not found |
+| 500 | Internal Server Error |
+
+### Authentication
+
+Sử dụng JWT Bearer Token trong header:
+```
+Authorization: Bearer <your_token_here>
+```
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer eyJhbGc..." http://localhost:8080/api/v1/profile
+```
 
 ## Run
 ```bash

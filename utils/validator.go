@@ -1,0 +1,128 @@
+package utils
+
+import (
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
+)
+
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+
+	// Đăng ký custom validators
+	validate.RegisterValidation("citizen_id", validateCitizenID)
+	validate.RegisterValidation("vn_phone", validateVNPhone)
+	validate.RegisterValidation("strong_password", validateStrongPassword)
+	validate.RegisterValidation("past_date", validatePastDate)
+}
+
+// RegisterCustomValidators - Đăng ký custom validators cho Gin
+func RegisterCustomValidators() {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("citizen_id", validateCitizenID)
+		v.RegisterValidation("vn_phone", validateVNPhone)
+		v.RegisterValidation("strong_password", validateStrongPassword)
+		v.RegisterValidation("past_date", validatePastDate)
+	}
+}
+
+// Validate CitizenID - phải đủ 12 chữ số
+func validateCitizenID(fl validator.FieldLevel) bool {
+	citizenID := fl.Field().String()
+	matched, _ := regexp.MatchString(`^\d{12}$`, citizenID)
+	return matched
+}
+
+// Validate số điện thoại Việt Nam
+func validateVNPhone(fl validator.FieldLevel) bool {
+	phone := fl.Field().String()
+	matched, _ := regexp.MatchString(`^(0[3|5|7|8|9])+([0-9]{8})$|^(84[3|5|7|8|9])+([0-9]{8})$`, phone)
+	return matched
+}
+
+// Validate password mạnh - tối thiểu 8 ký tự, có chữ hoa và ký tự đặc biệt
+func validateStrongPassword(fl validator.FieldLevel) bool {
+	password := fl.Field().String()
+
+	if len(password) < 8 {
+		return false
+	}
+
+	hasUpper, _ := regexp.MatchString(`[A-Z]`, password)
+	if !hasUpper {
+		return false
+	}
+
+	hasSpecial, _ := regexp.MatchString(`[!@#$%^&*(),.?":{}|<>]`, password)
+	if !hasSpecial {
+		return false
+	}
+
+	return true
+}
+
+// Validate ngày trong quá khứ
+func validatePastDate(fl validator.FieldLevel) bool {
+	dateStr := fl.Field().String()
+	if dateStr == "" {
+		return true
+	}
+
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return false
+	}
+
+	return date.Before(time.Now())
+}
+
+// GetValidator - Trả về validator instance
+func GetValidator() *validator.Validate {
+	return validate
+}
+
+// ValidateStruct - Validate struct và trả về message lỗi
+func ValidateStruct(s interface{}) error {
+	return validate.Struct(s)
+}
+
+// FormatValidationErrorsMap - Trả về map[field]error_message
+func FormatValidationErrorsMap(err error) map[string]string {
+	errorMap := make(map[string]string)
+
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		for _, e := range validationErrors {
+			fieldName := strings.ToLower(e.Field())
+
+			switch e.Tag() {
+			case "required":
+				errorMap[fieldName] = "This field is required"
+			case "email":
+				errorMap[fieldName] = "Invalid email format"
+			case "citizen_id":
+				errorMap[fieldName] = "Must be exactly 12 digits"
+			case "vn_phone":
+				errorMap[fieldName] = "Invalid Vietnam phone number format"
+			case "strong_password":
+				errorMap[fieldName] = "Must be at least 8 characters with uppercase and special character"
+			case "past_date":
+				errorMap[fieldName] = "Must be a date in the past"
+			case "oneof":
+				errorMap[fieldName] = "Must be one of: " + e.Param()
+			case "min":
+				errorMap[fieldName] = "Must be at least " + e.Param() + " characters"
+			default:
+				errorMap[fieldName] = "Validation failed on " + e.Tag()
+			}
+		}
+	} else {
+		errorMap["general"] = err.Error()
+	}
+
+	return errorMap
+}
