@@ -14,6 +14,6 @@ type Service struct {
 	Fee            *int      `json:"fee"`
 
 	// Relations
-	Department   Department    `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
-	Applications []Application `gorm:"foreignKey:ServiceID" json:"applications,omitempty"`
+	Department   *Department    `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
+	Applications []Application `gorm:"foreignKey:ServiceID" json:"-"`
 }

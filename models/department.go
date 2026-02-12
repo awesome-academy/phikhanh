@@ -9,6 +9,6 @@ type Department struct {
 	LeaderName string `json:"leader_name"`
 
 	// Relations
-	Users    []User    `gorm:"foreignKey:DepartmentID" json:"users,omitempty"`
-	Services []Service `gorm:"foreignKey:DepartmentID" json:"services,omitempty"`
+	Users    []User    `gorm:"foreignKey:DepartmentID" json:"-"`
+	Services []Service `gorm:"foreignKey:DepartmentID" json:"-"`
 }

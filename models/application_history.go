@@ -11,6 +11,6 @@ type ApplicationHistory struct {
 	Note          string    `gorm:"type:text" json:"note"`
 
 	// Relations
-	Application Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
-	Actor       User        `gorm:"foreignKey:ActorID" json:"actor,omitempty"`
+	Application *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
+	Actor       *User        `gorm:"foreignKey:ActorID" json:"actor,omitempty"`
 }

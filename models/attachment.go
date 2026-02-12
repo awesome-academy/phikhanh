@@ -18,5 +18,5 @@ type Attachment struct {
 	Type          AttachmentType `gorm:"type:varchar(20)" json:"type"`
 
 	// Relations
-	Application Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
+	Application *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
 }

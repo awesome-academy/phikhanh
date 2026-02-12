@@ -19,5 +19,5 @@ type Notification struct {
 	IsRead  bool             `gorm:"default:false" json:"is_read"`
 
 	// Relations
-	User User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
