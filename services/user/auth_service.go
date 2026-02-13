@@ -42,7 +42,7 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, utils.ErrInternalServerResponse()
 	}
 
 	// Parse date of birth
