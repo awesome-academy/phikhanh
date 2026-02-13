@@ -81,8 +81,7 @@ definitions:
         example: Nguyễn Văn A
         type: string
       password:
-        example: password123
-        minLength: 6
+        example: Password@123
         type: string
       phone:
         example: "0901234567"
@@ -90,6 +89,7 @@ definitions:
     required:
     - citizen_id
     - email
+    - gender
     - name
     - password
     - phone
@@ -119,6 +119,7 @@ definitions:
         example: "0901234567"
         type: string
     required:
+    - gender
     - name
     - phone
     type: object
@@ -147,9 +148,24 @@ definitions:
     properties:
       data: {}
       message:
+        example: Success
         type: string
-      success:
-        type: boolean
+      status:
+        example: 200
+        type: integer
+    type: object
+  utils.ValidationErrors:
+    properties:
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        example: Validation failed
+        type: string
+      status:
+        example: 400
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -188,6 +204,10 @@ paths:
                 data:
                   $ref: '#/definitions/user.LoginResponse'
               type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ValidationErrors'
         "401":
           description: Unauthorized
           schema:
@@ -199,12 +219,16 @@ paths:
     post:
       consumes:
       - application/json
-      description: Đăng xuất khỏi hệ thống
+      description: Đăng xuất khỏi hệ thống (client xóa token)
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/utils.APIResponse'
       security:
@@ -230,11 +254,16 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/utils.APIResponse'
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserInfo'
+              type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.APIResponse'
+            $ref: '#/definitions/utils.ValidationErrors'
       summary: Đăng ký tài khoản
       tags:
       - Auth
@@ -298,6 +327,7 @@ paths:
       - Profile
 securityDefinitions:
   BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization
     type: apiKey

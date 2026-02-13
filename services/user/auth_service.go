@@ -1,7 +1,6 @@
 package user
 
 import (
-	"errors"
 	"time"
 
 	"phikhanh/models"
@@ -9,6 +8,7 @@ import (
 	"phikhanh/utils"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type AuthService struct {
@@ -24,19 +24,19 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 	// Kiểm tra citizen_id đã tồn tại
 	exists, err := s.repo.IsCitizenIDExists(citizenID)
 	if err != nil {
-		return nil, err
+		return nil, utils.ErrInternalServerResponse()
 	}
 	if exists {
-		return nil, errors.New("citizen_id already exists")
+		return nil, utils.ErrCitizenIDExistsResponse()
 	}
 
 	// Kiểm tra email đã tồn tại
 	exists, err = s.repo.IsEmailExists(email)
 	if err != nil {
-		return nil, err
+		return nil, utils.ErrInternalServerResponse()
 	}
 	if exists {
-		return nil, errors.New("email already exists")
+		return nil, utils.ErrEmailExistsResponse()
 	}
 
 	// Hash password
@@ -69,7 +69,7 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 	}
 
 	if err := s.repo.CreateUser(user); err != nil {
-		return nil, err
+		return nil, utils.ErrInternalServerResponse()
 	}
 
 	return user, nil
@@ -80,18 +80,22 @@ func (s *AuthService) Login(citizenID, password string) (*models.User, string, e
 	// Tìm user
 	user, err := s.repo.FindByCitizenID(citizenID)
 	if err != nil {
-		return nil, "", errors.New("invalid citizen_id or password")
+		// Phân biệt giữa "not found" và "internal error"
+		if err == gorm.ErrRecordNotFound {
+			return nil, "", utils.ErrInvalidCredentialsResponse()
+		}
+		return nil, "", utils.ErrInternalServerResponse()
 	}
 
 	// Kiểm tra password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, "", errors.New("invalid citizen_id or password")
+		return nil, "", utils.ErrInvalidCredentialsResponse()
 	}
 
 	// Tạo JWT token
 	token, err := utils.GenerateToken(user.ID.String(), string(user.Role))
 	if err != nil {
-		return nil, "", err
+		return nil, "", utils.ErrInternalServerResponse()
 	}
 
 	return user, token, nil

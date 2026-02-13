@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -66,18 +67,46 @@ func validateStrongPassword(fl validator.FieldLevel) bool {
 	return true
 }
 
-// Validate ngày trong quá khứ
+// Validate ngày trong quá khứ - hỗ trợ string, *string, time.Time, *time.Time
 func validatePastDate(fl validator.FieldLevel) bool {
-	dateStr := fl.Field().String()
-	if dateStr == "" {
-		return true
+	field := fl.Field()
+
+	// Handle pointer types
+	if field.Kind() == reflect.Ptr {
+		// Nếu là nil và có omitempty thì valid
+		if field.IsNil() {
+			return true
+		}
+		// Lấy giá trị thực từ pointer
+		field = field.Elem()
 	}
 
-	date, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
+	var date time.Time
+	var err error
+
+	// Handle different types
+	switch field.Kind() {
+	case reflect.String:
+		dateStr := field.String()
+		if dateStr == "" {
+			return true // Empty string is valid with omitempty
+		}
+		date, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return false
+		}
+	case reflect.Struct:
+		// Handle time.Time
+		if field.Type() == reflect.TypeOf(time.Time{}) {
+			date = field.Interface().(time.Time)
+		} else {
+			return false
+		}
+	default:
 		return false
 	}
 
+	// Check if date is in the past
 	return date.Before(time.Now())
 }
 

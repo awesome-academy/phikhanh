@@ -31,12 +31,26 @@ func NewProfileController(service *userSvc.ProfileService) *ProfileController {
 // @Failure      401  {object}  utils.APIResponse
 // @Router       /profile [get]
 func (c *ProfileController) GetProfile(ctx *gin.Context) {
-	userID, _ := ctx.Get("user_id")
-	uuid, _ := uuid.Parse(userID.(string))
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(ctx, 401, "Unauthorized")
+		return
+	}
 
-	user, err := c.service.GetProfile(uuid)
+	parsedUUID, err := uuid.Parse(userID.(string))
 	if err != nil {
-		utils.ErrorResponse(ctx, http.StatusNotFound, "User not found")
+		utils.ErrorResponse(ctx, 400, "Invalid user ID")
+		return
+	}
+
+	user, err := c.service.GetProfile(parsedUUID)
+	if err != nil {
+		if svcErr, ok := err.(*utils.ServiceError); ok {
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			return
+		}
+		svcErr := utils.ErrInternalServerResponse()
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
@@ -75,12 +89,20 @@ func (c *ProfileController) GetProfile(ctx *gin.Context) {
 // @Failure      400  {object}  utils.APIResponse
 // @Router       /profile [put]
 func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
-	userID, _ := ctx.Get("user_id")
-	uuid, _ := uuid.Parse(userID.(string))
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(ctx, 401, "Unauthorized")
+		return
+	}
+
+	parsedUUID, err := uuid.Parse(userID.(string))
+	if err != nil {
+		utils.ErrorResponse(ctx, 400, "Invalid user ID")
+		return
+	}
 
 	var req userDto.UpdateProfileRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		// Trả về map[field]error
 		utils.ValidationErrorResponse(ctx, utils.FormatValidationErrorsMap(err))
 		return
 	}
@@ -91,12 +113,17 @@ func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
 	}
 
 	user, err := c.service.UpdateProfile(
-		uuid, req.Name, req.Phone, req.Address,
+		parsedUUID, req.Name, req.Phone, req.Address,
 		dobStr, req.Gender, req.IsEmailNotify,
 	)
 
 	if err != nil {
-		utils.ErrorResponse(ctx, http.StatusBadRequest, err.Error())
+		if svcErr, ok := err.(*utils.ServiceError); ok {
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			return
+		}
+		svcErr := utils.ErrInternalServerResponse()
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 

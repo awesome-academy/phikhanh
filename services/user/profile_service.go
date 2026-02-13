@@ -1,13 +1,14 @@
 package user
 
 import (
-	"errors"
 	"time"
 
 	"phikhanh/models"
 	userRepo "phikhanh/repositories/user"
+	"phikhanh/utils"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ProfileService struct {
@@ -20,14 +21,26 @@ func NewProfileService(repo *userRepo.ProfileRepository) *ProfileService {
 
 // Lấy thông tin profile
 func (s *ProfileService) GetProfile(userID uuid.UUID) (*models.User, error) {
-	return s.repo.FindByID(userID)
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		// Phân biệt giữa "not found" và "internal error"
+		if err == gorm.ErrRecordNotFound {
+			return nil, utils.ErrUserNotFoundResponse()
+		}
+		return nil, utils.ErrInternalServerResponse()
+	}
+	return user, nil
 }
 
 // Cập nhật profile
 func (s *ProfileService) UpdateProfile(userID uuid.UUID, name, phone, address, dateOfBirth, gender string, isEmailNotify *bool) (*models.User, error) {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
-		return nil, errors.New("user not found")
+		// Phân biệt giữa "not found" và "internal error"
+		if err == gorm.ErrRecordNotFound {
+			return nil, utils.ErrUserNotFoundResponse()
+		}
+		return nil, utils.ErrInternalServerResponse()
 	}
 
 	// Cập nhật thông tin
@@ -48,7 +61,7 @@ func (s *ProfileService) UpdateProfile(userID uuid.UUID, name, phone, address, d
 	}
 
 	if err := s.repo.UpdateUser(user); err != nil {
-		return nil, err
+		return nil, utils.ErrInternalServerResponse()
 	}
 
 	return user, nil
