@@ -23,11 +23,10 @@ func NewProfileService(repo *userRepo.ProfileRepository) *ProfileService {
 func (s *ProfileService) GetProfile(userID uuid.UUID) (*models.User, error) {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
-		// Phân biệt giữa "not found" và "internal error"
 		if err == gorm.ErrRecordNotFound {
-			return nil, utils.ErrUserNotFoundResponse()
+			return nil, utils.NewNotFoundError("User not found")
 		}
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 	return user, nil
 }
@@ -37,9 +36,9 @@ func (s *ProfileService) UpdateProfile(userID uuid.UUID, name, phone, address, d
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, utils.ErrUserNotFoundResponse()
+			return nil, utils.NewNotFoundError("User not found")
 		}
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 
 	// Cập nhật thông tin
@@ -64,7 +63,7 @@ func (s *ProfileService) UpdateProfile(userID uuid.UUID, name, phone, address, d
 	}
 
 	if err := s.repo.UpdateUser(user); err != nil {
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 
 	return user, nil

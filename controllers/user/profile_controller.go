@@ -33,13 +33,15 @@ func NewProfileController(service *userSvc.ProfileService) *ProfileController {
 func (c *ProfileController) GetProfile(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(ctx, 401, "Unauthorized")
+		svcErr := utils.NewUnauthorizedError("Unauthorized")
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
 	parsedUUID, err := uuid.Parse(userID.(string))
 	if err != nil {
-		utils.ErrorResponse(ctx, 400, "Invalid user ID")
+		svcErr := utils.NewBadRequestError("Invalid user ID")
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
@@ -49,7 +51,8 @@ func (c *ProfileController) GetProfile(ctx *gin.Context) {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		svcErr := utils.ErrInternalServerResponse()
+		// Fallback for unexpected errors
+		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
@@ -92,13 +95,15 @@ func (c *ProfileController) GetProfile(ctx *gin.Context) {
 func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(ctx, 401, "Unauthorized")
+		svcErr := utils.NewUnauthorizedError("Unauthorized")
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
 	parsedUUID, err := uuid.Parse(userID.(string))
 	if err != nil {
-		utils.ErrorResponse(ctx, 400, "Invalid user ID")
+		svcErr := utils.NewBadRequestError("Invalid user ID")
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
@@ -128,7 +133,8 @@ func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		svcErr := utils.ErrInternalServerResponse()
+		// Fallback for unexpected errors
+		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}

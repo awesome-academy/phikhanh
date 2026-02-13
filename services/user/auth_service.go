@@ -24,25 +24,25 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 	// Kiểm tra citizen_id đã tồn tại
 	exists, err := s.repo.IsCitizenIDExists(citizenID)
 	if err != nil {
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 	if exists {
-		return nil, utils.ErrCitizenIDExistsResponse()
+		return nil, utils.NewBadRequestError("Citizen ID already exists")
 	}
 
 	// Kiểm tra email đã tồn tại
 	exists, err = s.repo.IsEmailExists(email)
 	if err != nil {
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 	if exists {
-		return nil, utils.ErrEmailExistsResponse()
+		return nil, utils.NewBadRequestError("Email already exists")
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 
 	// Parse date of birth
@@ -69,7 +69,7 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 	}
 
 	if err := s.repo.CreateUser(user); err != nil {
-		return nil, utils.ErrInternalServerResponse()
+		return nil, utils.NewInternalServerError(err)
 	}
 
 	return user, nil
@@ -80,22 +80,21 @@ func (s *AuthService) Login(citizenID, password string) (*models.User, string, e
 	// Tìm user
 	user, err := s.repo.FindByCitizenID(citizenID)
 	if err != nil {
-		// Phân biệt giữa "not found" và "internal error"
 		if err == gorm.ErrRecordNotFound {
-			return nil, "", utils.ErrInvalidCredentialsResponse()
+			return nil, "", utils.NewUnauthorizedError("Invalid citizen ID or password")
 		}
-		return nil, "", utils.ErrInternalServerResponse()
+		return nil, "", utils.NewInternalServerError(err)
 	}
 
 	// Kiểm tra password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, "", utils.ErrInvalidCredentialsResponse()
+		return nil, "", utils.NewUnauthorizedError("Invalid citizen ID or password")
 	}
 
 	// Tạo JWT token
 	token, err := utils.GenerateToken(user.ID.String(), string(user.Role))
 	if err != nil {
-		return nil, "", utils.ErrInternalServerResponse()
+		return nil, "", utils.NewInternalServerError(err)
 	}
 
 	return user, token, nil

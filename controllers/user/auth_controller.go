@@ -45,7 +45,8 @@ func (c *AuthController) Register(ctx *gin.Context) {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		svcErr := utils.ErrInternalServerResponse()
+		// Fallback for unexpected errors
+		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
@@ -86,7 +87,8 @@ func (c *AuthController) Login(ctx *gin.Context) {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		svcErr := utils.ErrInternalServerResponse()
+		// Fallback for unexpected errors
+		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}

@@ -1,68 +1,47 @@
 package utils
 
-import "errors"
+import "fmt"
 
 // ServiceError - Struct chứa status code và message để trả về từ service
 type ServiceError struct {
 	StatusCode int
 	Message    string
-	Err        error
+	Err        error // Lưu error gốc để log
 }
 
 func (e *ServiceError) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("%s: %v", e.Message, e.Err)
+	}
 	return e.Message
 }
 
-// NewServiceError - Tạo ServiceError mới
-func NewServiceError(statusCode int, message string, err error) *ServiceError {
+// NewServiceError - Tạo ServiceError với status code và message tùy chỉnh
+func NewServiceError(statusCode int, message string) *ServiceError {
 	return &ServiceError{
 		StatusCode: statusCode,
 		Message:    message,
-		Err:        err,
 	}
 }
 
-// Custom errors
-var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrCitizenIDExists    = errors.New("citizen_id already exists")
-	ErrEmailExists        = errors.New("email already exists")
-	ErrUnauthorized       = errors.New("unauthorized")
-	ErrUserNotFound       = errors.New("user not found")
-	ErrServiceNotFound    = errors.New("service not found")
-	ErrInvalidInput       = errors.New("invalid input")
-	ErrInternalServer     = errors.New("internal server error")
-)
-
-// Predefined ServiceErrors
-func ErrInvalidCredentialsResponse() *ServiceError {
-	return NewServiceError(401, "Invalid citizen ID or password", ErrInvalidCredentials)
+// Common error constructors
+func NewBadRequestError(message string) *ServiceError {
+	return NewServiceError(400, message)
 }
 
-func ErrCitizenIDExistsResponse() *ServiceError {
-	return NewServiceError(400, "Citizen ID already exists", ErrCitizenIDExists)
+func NewUnauthorizedError(message string) *ServiceError {
+	return NewServiceError(401, message)
 }
 
-func ErrEmailExistsResponse() *ServiceError {
-	return NewServiceError(400, "Email already exists", ErrEmailExists)
+func NewNotFoundError(message string) *ServiceError {
+	return NewServiceError(404, message)
 }
 
-func ErrUnauthorizedResponse() *ServiceError {
-	return NewServiceError(401, "Unauthorized access", ErrUnauthorized)
-}
-
-func ErrUserNotFoundResponse() *ServiceError {
-	return NewServiceError(404, "User not found", ErrUserNotFound)
-}
-
-func ErrServiceNotFoundResponse() *ServiceError {
-	return NewServiceError(404, "Service not found", ErrServiceNotFound)
-}
-
-func ErrInvalidInputResponse() *ServiceError {
-	return NewServiceError(400, "Invalid input data", ErrInvalidInput)
-}
-
-func ErrInternalServerResponse() *ServiceError {
-	return NewServiceError(500, "An error occurred, please try again later", ErrInternalServer)
+// NewInternalServerError - Trả về error 500 với message cụ thể từ error
+func NewInternalServerError(err error) *ServiceError {
+	return &ServiceError{
+		StatusCode: 500,
+		Message:    "An error occurred, please try again later",
+		Err:        err,
+	}
 }
