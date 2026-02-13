@@ -70,8 +70,8 @@ func (c *AuthController) Register(ctx *gin.Context) {
 // @Produce      json
 // @Param        request body userDto.LoginRequest true "Thông tin đăng nhập"
 // @Success      200  {object}  utils.APIResponse{data=userDto.LoginResponse}
-// @Failure      401  {object}  utils.APIResponse
 // @Failure      400  {object}  utils.ValidationErrors
+// @Failure      401  {object}  utils.APIResponse
 // @Router       /auth/login [post]
 func (c *AuthController) Login(ctx *gin.Context) {
 	var req userDto.LoginRequest

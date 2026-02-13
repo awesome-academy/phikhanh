@@ -319,6 +319,10 @@ paths:
         "400":
           description: Bad Request
           schema:
+            $ref: '#/definitions/utils.ValidationErrors'
+        "401":
+          description: Unauthorized
+          schema:
             $ref: '#/definitions/utils.APIResponse'
       security:
       - BearerAuth: []

@@ -86,7 +86,8 @@ func (c *ProfileController) GetProfile(ctx *gin.Context) {
 // @Security     BearerAuth
 // @Param        request body userDto.UpdateProfileRequest true "Thông tin cập nhật"
 // @Success      200  {object}  utils.APIResponse{data=userDto.ProfileResponse}
-// @Failure      400  {object}  utils.APIResponse
+// @Failure      400  {object}  utils.ValidationErrors
+// @Failure      401  {object}  utils.APIResponse
 // @Router       /profile [put]
 func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
@@ -112,8 +113,13 @@ func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
 		dobStr = *req.DateOfBirth
 	}
 
+	addressStr := ""
+	if req.Address != nil {
+		addressStr = *req.Address
+	}
+
 	user, err := c.service.UpdateProfile(
-		parsedUUID, req.Name, req.Phone, req.Address,
+		parsedUUID, req.Name, req.Phone, addressStr,
 		dobStr, req.Gender, req.IsEmailNotify,
 	)
 

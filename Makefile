@@ -19,9 +19,11 @@ build:
 # Generate swagger và run (development)
 dev: swagger run
 
-# Clean build files
+# Clean build files (không xóa swagger.yaml để FE reference)
 clean:
-	rm -rf phikhanh docs/
+	rm -f phikhanh
+	rm -f docs/docs.go
+	rm -f docs/swagger.json
 
 # Install dependencies
 deps:

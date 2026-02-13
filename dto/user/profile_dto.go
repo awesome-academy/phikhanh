@@ -19,7 +19,7 @@ type ProfileResponse struct {
 type UpdateProfileRequest struct {
 	Name          string  `json:"name" binding:"required" example:"Nguyễn Văn A"`
 	Phone         string  `json:"phone" binding:"required,vn_phone" example:"0901234567"`
-	Address       string  `json:"address" example:"123 Đường ABC, Quận 1, TP.HCM"`
+	Address       *string `json:"address" binding:"omitempty" example:"123 Đường ABC, Quận 1, TP.HCM"`
 	DateOfBirth   *string `json:"date_of_birth" binding:"omitempty,past_date" example:"1990-01-15"`
 	Gender        string  `json:"gender" binding:"required,oneof=male female other" example:"male"`
 	IsEmailNotify *bool   `json:"is_email_notify" example:"true"`

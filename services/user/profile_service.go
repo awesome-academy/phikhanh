@@ -36,7 +36,6 @@ func (s *ProfileService) GetProfile(userID uuid.UUID) (*models.User, error) {
 func (s *ProfileService) UpdateProfile(userID uuid.UUID, name, phone, address, dateOfBirth, gender string, isEmailNotify *bool) (*models.User, error) {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
-		// Phân biệt giữa "not found" và "internal error"
 		if err == gorm.ErrRecordNotFound {
 			return nil, utils.ErrUserNotFoundResponse()
 		}
@@ -46,8 +45,12 @@ func (s *ProfileService) UpdateProfile(userID uuid.UUID, name, phone, address, d
 	// Cập nhật thông tin
 	user.Name = name
 	user.Phone = phone
-	user.Address = address
 	user.Gender = models.Gender(gender)
+
+	// Chỉ update address nếu được truyền (không phải empty string)
+	if address != "" {
+		user.Address = address
+	}
 
 	if dateOfBirth != "" {
 		parsed, err := time.Parse("2006-01-02", dateOfBirth)

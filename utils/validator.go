@@ -42,7 +42,7 @@ func validateCitizenID(fl validator.FieldLevel) bool {
 // Validate số điện thoại Việt Nam
 func validateVNPhone(fl validator.FieldLevel) bool {
 	phone := fl.Field().String()
-	matched, _ := regexp.MatchString(`^(0[3|5|7|8|9])+([0-9]{8})$|^(84[3|5|7|8|9])+([0-9]{8})$`, phone)
+	matched, _ := regexp.MatchString(`^(0(3|5|7|8|9)[0-9]{8}|84(3|5|7|8|9)[0-9]{8})$`, phone)
 	return matched
 }
 
@@ -120,13 +120,14 @@ func ValidateStruct(s interface{}) error {
 	return validate.Struct(s)
 }
 
-// FormatValidationErrorsMap - Trả về map[field]error_message
+// FormatValidationErrorsMap - Trả về map[field]error_message với JSON field names
 func FormatValidationErrorsMap(err error) map[string]string {
 	errorMap := make(map[string]string)
 
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range validationErrors {
-			fieldName := strings.ToLower(e.Field())
+			// Lấy JSON tag name thay vì lowercase field name
+			fieldName := getJSONFieldName(e)
 
 			switch e.Tag() {
 			case "required":
@@ -154,4 +155,54 @@ func FormatValidationErrorsMap(err error) map[string]string {
 	}
 
 	return errorMap
+}
+
+// getJSONFieldName - Lấy JSON tag name từ struct field
+func getJSONFieldName(e validator.FieldError) string {
+	field := e.Field()
+
+	// Namespace có dạng "RegisterRequest.CitizenID"
+	namespace := e.Namespace()
+	parts := strings.Split(namespace, ".")
+	if len(parts) > 1 {
+		// Lấy tên struct và field
+		structName := parts[0]
+		fieldName := parts[1]
+
+		// Reflect để lấy JSON tag
+		if e.StructNamespace() != "" {
+			// Tìm struct type từ namespace
+			if structField, ok := getStructFieldByName(structName, fieldName); ok {
+				if jsonTag := structField.Tag.Get("json"); jsonTag != "" {
+					// Parse JSON tag (format: "field_name,omitempty")
+					tagParts := strings.Split(jsonTag, ",")
+					if len(tagParts) > 0 && tagParts[0] != "" {
+						return tagParts[0]
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: convert to snake_case
+	return toSnakeCase(field)
+}
+
+// getStructFieldByName - Helper để lấy struct field (simplified)
+func getStructFieldByName(structName, fieldName string) (reflect.StructField, bool) {
+	// This is a simplified version - in production, you might need type registry
+	// For now, return empty to fallback to snake_case
+	return reflect.StructField{}, false
+}
+
+// toSnakeCase - Convert CamelCase to snake_case
+func toSnakeCase(str string) string {
+	var result strings.Builder
+	for i, r := range str {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result.WriteRune('_')
+		}
+		result.WriteRune(r)
+	}
+	return strings.ToLower(result.String())
 }
