@@ -1,5 +1,20 @@
 basePath: /api/v1
 definitions:
+  user.DepartmentInfo:
+    properties:
+      address:
+        example: 123 Đường ABC, Quận 1, TP.HCM
+        type: string
+      code:
+        example: SYT
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Sở Y tế
+        type: string
+    type: object
   user.LoginRequest:
     properties:
       citizen_id:
@@ -94,6 +109,78 @@ definitions:
     - password
     - phone
     type: object
+  user.ServiceDetailResponse:
+    properties:
+      code:
+        example: SV001
+        type: string
+      created_at:
+        example: "2024-01-01T10:00:00Z"
+        type: string
+      department:
+        $ref: '#/definitions/user.DepartmentInfo'
+      description:
+        example: Dịch vụ đăng ký kinh doanh cho cá nhân và doanh nghiệp
+        type: string
+      fee:
+        example: 500000
+        type: integer
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Đăng ký kinh doanh
+        type: string
+      processing_days:
+        example: 5
+        type: integer
+      sector:
+        example: Health
+        type: string
+    type: object
+  user.ServiceListItem:
+    properties:
+      code:
+        example: SV001
+        type: string
+      department_name:
+        example: Sở Y tế
+        type: string
+      fee:
+        example: 500000
+        type: integer
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Đăng ký kinh doanh
+        type: string
+      processing_days:
+        example: 5
+        type: integer
+      sector:
+        example: Health
+        type: string
+    type: object
+  user.ServiceListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/user.ServiceListItem'
+        type: array
+      limit:
+        example: 10
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total_items:
+        example: 50
+        type: integer
+      total_pages:
+        example: 5
+        type: integer
+    type: object
   user.UpdateProfileRequest:
     properties:
       address:
@@ -122,6 +209,21 @@ definitions:
     - gender
     - name
     - phone
+    type: object
+  user.UploadFileResponse:
+    properties:
+      file_name:
+        example: 20240115143022_a1b2c3d4.jpg
+        type: string
+      file_size:
+        example: 1024000
+        type: integer
+      file_url:
+        example: /assets/images/20240115143022_a1b2c3d4.jpg
+        type: string
+      original_name:
+        example: document.jpg
+        type: string
     type: object
   user.UserInfo:
     properties:
@@ -329,6 +431,119 @@ paths:
       summary: Cập nhật hồ sơ
       tags:
       - Profile
+  /services:
+    get:
+      consumes:
+      - application/json
+      description: Lấy danh sách dịch vụ với pagination và filter
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search by name or code
+        in: query
+        name: keyword
+        type: string
+      - description: Filter by sector
+        in: query
+        name: sector
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.ServiceListResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Danh sách dịch vụ
+      tags:
+      - Services
+  /services/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Lấy thông tin chi tiết dịch vụ
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.ServiceDetailResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Chi tiết dịch vụ
+      tags:
+      - Services
+  /upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload file (images, documents) lên server
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UploadFileResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload file
+      tags:
+      - Upload
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

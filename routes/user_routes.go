@@ -27,6 +27,14 @@ func SetupUserRoutes(router *gin.Engine) {
 	profileService := userSvc.NewProfileService(profileRepo)
 	profileController := userCtrl.NewProfileController(profileService)
 
+	// Service
+	serviceRepo := userRepo.NewServiceRepository(config.GetDB())
+	serviceService := userSvc.NewServiceService(serviceRepo)
+	serviceController := userCtrl.NewServiceController(serviceService)
+
+	// Upload
+	uploadController := userCtrl.NewUploadController()
+
 	// Swagger documentation
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -50,5 +58,15 @@ func SetupUserRoutes(router *gin.Engine) {
 			profile.GET("", profileController.GetProfile)
 			profile.PUT("", profileController.UpdateProfile)
 		}
+
+		// Service routes (public)
+		services := api.Group("/services")
+		{
+			services.GET("", serviceController.GetServiceList)
+			services.GET("/:id", serviceController.GetServiceDetail)
+		}
+
+		// Upload routes (protected)
+		api.POST("/upload", middlewares.AuthMiddleware(), uploadController.UploadFile)
 	}
 }
