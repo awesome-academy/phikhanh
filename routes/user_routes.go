@@ -12,6 +12,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+const maxUploadBodySize = int64(11 << 20) // 11MB
+
 // Thiết lập routes cho User API (JSON)
 func SetupUserRoutes(router *gin.Engine) {
 	// Health check
@@ -34,6 +36,11 @@ func SetupUserRoutes(router *gin.Engine) {
 
 	// Upload
 	uploadController := userCtrl.NewUploadController()
+
+	// Application
+	appRepo := userRepo.NewApplicationRepository(config.GetDB())
+	appService := userSvc.NewApplicationService(appRepo)
+	appController := userCtrl.NewApplicationController(appService)
 
 	// Swagger documentation
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -72,5 +79,12 @@ func SetupUserRoutes(router *gin.Engine) {
 			middlewares.UploadRateLimitMiddleware(),
 			uploadController.UploadFile,
 		)
+
+		// Application routes (protected)
+		applications := api.Group("/applications")
+		applications.Use(middlewares.AuthMiddleware())
+		{
+			applications.POST("", appController.SubmitApplication)
+		}
 	}
 }
