@@ -99,12 +99,13 @@ func (s *ServiceService) GetServiceDetail(id uuid.UUID) (*userDto.ServiceDetailR
 	}
 
 	if service.Department != nil {
-		response.Department = userDto.DepartmentInfo{
+		dept := userDto.DepartmentInfo{
 			ID:      service.Department.ID.String(),
 			Name:    service.Department.Name,
 			Code:    service.Department.Code,
 			Address: service.Department.Address,
 		}
+		response.Department = &dept
 	}
 
 	return response, nil

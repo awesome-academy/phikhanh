@@ -84,8 +84,10 @@ func UploadFile(file *multipart.FileHeader) (*UploadResult, error) {
 
 	// Copy file content
 	if _, err := io.Copy(dst, src); err != nil {
+		// Đảm bảo đóng file trước khi xóa để tránh giữ handle mở trên một số OS
+		_ = dst.Close()
 		// Xóa file nếu copy thất bại
-		os.Remove(filePath)
+		_ = os.Remove(filePath)
 		return nil, NewInternalServerError(err)
 	}
 
@@ -136,22 +138,40 @@ func isAllowedExtension(ext string) bool {
 func DeleteFile(filePath string) error {
 	uploadDir := getUploadDir()
 
-	// Clean path để resolve path traversal
+	// Resolve symlinks cho allowed directory
+	allowedDir, err := filepath.EvalSymlinks(uploadDir)
+	if err != nil {
+		// Nếu dir chưa tồn tại thì dùng Abs
+		allowedDir, err = filepath.Abs(uploadDir)
+		if err != nil {
+			return NewInternalServerError(err)
+		}
+	}
+
+	// Clean path trước
 	cleanPath := filepath.Clean(filePath)
 
-	// Validate path phải nằm trong UploadDir
-	allowedDir, err := filepath.Abs(uploadDir)
+	// Resolve symlinks cho file path
+	absPath, err := filepath.EvalSymlinks(cleanPath)
+	if err != nil {
+		// File chưa tồn tại hoặc symlink broken
+		if os.IsNotExist(err) {
+			return NewNotFoundError("File not found")
+		}
+		absPath, err = filepath.Abs(cleanPath)
+		if err != nil {
+			return NewInternalServerError(err)
+		}
+	}
+
+	// Dùng filepath.Rel để kiểm tra containment - an toàn hơn HasPrefix
+	rel, err := filepath.Rel(allowedDir, absPath)
 	if err != nil {
 		return NewInternalServerError(err)
 	}
 
-	absPath, err := filepath.Abs(cleanPath)
-	if err != nil {
-		return NewInternalServerError(err)
-	}
-
-	// Kiểm tra file có nằm trong allowed directory không
-	if !strings.HasPrefix(absPath, allowedDir+string(filepath.Separator)) {
+	// Nếu relative path bắt đầu bằng ".." thì file nằm ngoài allowed directory
+	if strings.HasPrefix(rel, "..") {
 		return NewBadRequestError("Invalid file path")
 	}
 

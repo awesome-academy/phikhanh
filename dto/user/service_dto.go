@@ -31,15 +31,15 @@ type ServiceListResponse struct {
 
 // Response chi tiết service
 type ServiceDetailResponse struct {
-	ID             string         `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Name           string         `json:"name" example:"Đăng ký kinh doanh"`
-	Code           string         `json:"code" example:"SV001"`
-	Description    string         `json:"description" example:"Dịch vụ đăng ký kinh doanh cho cá nhân và doanh nghiệp"`
-	Sector         string         `json:"sector" example:"Health"`
-	Fee            *int           `json:"fee" example:"500000"`
-	ProcessingDays int            `json:"processing_days" example:"5"`
-	Department     DepartmentInfo `json:"department"`
-	CreatedAt      string         `json:"created_at" example:"2024-01-01T10:00:00Z"`
+	ID             string          `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name           string          `json:"name" example:"Đăng ký kinh doanh"`
+	Code           string          `json:"code" example:"SV001"`
+	Description    string          `json:"description" example:"Dịch vụ đăng ký kinh doanh cho cá nhân và doanh nghiệp"`
+	Sector         string          `json:"sector" example:"Health"`
+	Fee            *int            `json:"fee" example:"500000"`
+	ProcessingDays int             `json:"processing_days" example:"5"`
+	Department     *DepartmentInfo `json:"department,omitempty"`
+	CreatedAt      string          `json:"created_at" example:"2024-01-01T10:00:00Z"`
 }
 
 // Thông tin department

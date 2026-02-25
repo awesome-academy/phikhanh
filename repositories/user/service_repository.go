@@ -24,7 +24,7 @@ func (r *ServiceRepository) GetServiceList(page, limit int, keyword, sector stri
 
 	// Filter by keyword (name OR code)
 	if keyword != "" {
-		query = query.Where("name ILIKE ? OR code ILIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where("(name ILIKE ? OR code ILIKE ?)", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
 	// Filter by sector

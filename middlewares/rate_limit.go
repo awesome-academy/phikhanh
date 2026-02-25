@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -68,9 +69,15 @@ func UploadRateLimitMiddleware() gin.HandlerFunc {
 			record = uploadRecords[userIDStr]
 		}
 
+		// Seconds còn lại cho đến khi reset
+		retryAfter := int(time.Until(record.resetAt).Seconds())
+
 		// Kiểm tra số lần upload
 		if record.count >= maxUploadsPerHour {
-			svcErr := utils.NewBadRequestError("Upload limit exceeded (max 20 uploads per hour)")
+			ctx.Header("Retry-After", fmt.Sprintf("%d", retryAfter))
+			svcErr := utils.NewTooManyRequestsError(
+				fmt.Sprintf("Upload limit exceeded (max %d uploads per hour). Retry after %d seconds", maxUploadsPerHour, retryAfter),
+			)
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			ctx.Abort()
 			return
@@ -78,7 +85,10 @@ func UploadRateLimitMiddleware() gin.HandlerFunc {
 
 		// Kiểm tra tổng dung lượng
 		if record.totalSize+file.Size > maxTotalSizePerHour {
-			svcErr := utils.NewBadRequestError("Upload size limit exceeded (max 50MB per hour)")
+			ctx.Header("Retry-After", fmt.Sprintf("%d", retryAfter))
+			svcErr := utils.NewTooManyRequestsError(
+				fmt.Sprintf("Upload size limit exceeded (max 50MB per hour). Retry after %d seconds", retryAfter),
+			)
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			ctx.Abort()
 			return
