@@ -18,6 +18,8 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBSSLMode  string
+
+	JWTSecret string
 }
 
 var AppConfig *Config
@@ -37,6 +39,8 @@ func LoadConfig() {
 		DBPassword: getEnv("DB_PASSWORD", "postgres"),
 		DBName:     getEnv("DB_NAME", "public_service_management"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
+
+		JWTSecret: getEnv("JWT_SECRET", "your_jwt_secret"),
 	}
 
 	log.Println("Configuration loaded successfully")

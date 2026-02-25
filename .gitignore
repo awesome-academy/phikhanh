@@ -32,9 +32,13 @@ go.work
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-
-# Uploaded files (keep folder but ignore files)
+# Uploaded images (keep folder but ignore files)
 assets/images/*
 !assets/images/.gitkeep
+
+# Swagger docs (auto-generated - keep swagger.yaml for FE reference)
+docs/docs.go
+docs/swagger.json
+
+# Logs
+*.log

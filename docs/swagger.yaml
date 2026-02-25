@@ -1,0 +1,338 @@
+basePath: /api/v1
+definitions:
+  user.LoginRequest:
+    properties:
+      citizen_id:
+        example: "001234567890"
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - citizen_id
+    - password
+    type: object
+  user.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/user.UserInfo'
+    type: object
+  user.ProfileResponse:
+    properties:
+      address:
+        example: 123 Đường ABC, Quận 1, TP.HCM
+        type: string
+      citizen_id:
+        example: "001234567890"
+        type: string
+      created_at:
+        example: "2024-01-01T10:00:00Z"
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      email:
+        example: nguyenvana@example.com
+        type: string
+      gender:
+        example: male
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      is_email_notify:
+        example: true
+        type: boolean
+      name:
+        example: Nguyễn Văn A
+        type: string
+      phone:
+        example: "0901234567"
+        type: string
+      role:
+        example: citizen
+        type: string
+    type: object
+  user.RegisterRequest:
+    properties:
+      address:
+        example: 123 Đường ABC, Quận 1, TP.HCM
+        type: string
+      citizen_id:
+        example: "001234567890"
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      email:
+        example: nguyenvana@example.com
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        - other
+        example: male
+        type: string
+      name:
+        example: Nguyễn Văn A
+        type: string
+      password:
+        example: Password@123
+        type: string
+      phone:
+        example: "0901234567"
+        type: string
+    required:
+    - citizen_id
+    - email
+    - gender
+    - name
+    - password
+    - phone
+    type: object
+  user.UpdateProfileRequest:
+    properties:
+      address:
+        example: 123 Đường ABC, Quận 1, TP.HCM
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        - other
+        example: male
+        type: string
+      is_email_notify:
+        example: true
+        type: boolean
+      name:
+        example: Nguyễn Văn A
+        type: string
+      phone:
+        example: "0901234567"
+        type: string
+    required:
+    - gender
+    - name
+    - phone
+    type: object
+  user.UserInfo:
+    properties:
+      citizen_id:
+        example: "001234567890"
+        type: string
+      email:
+        example: nguyenvana@example.com
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Nguyễn Văn A
+        type: string
+      phone:
+        example: "0901234567"
+        type: string
+      role:
+        example: citizen
+        type: string
+    type: object
+  utils.APIResponse:
+    properties:
+      data: {}
+      message:
+        example: Success
+        type: string
+      status:
+        example: 200
+        type: integer
+    type: object
+  utils.ValidationErrors:
+    properties:
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        example: Validation failed
+        type: string
+      status:
+        example: 400
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+  description: API cho hệ thống quản lý dịch vụ công
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Public Service Management API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Đăng nhập bằng CCCD và mật khẩu
+      parameters:
+      - description: Thông tin đăng nhập
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ValidationErrors'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      summary: Đăng nhập
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Đăng xuất khỏi hệ thống (client xóa token)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Đăng xuất
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Đăng ký tài khoản công dân mới
+      parameters:
+      - description: Thông tin đăng ký
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ValidationErrors'
+      summary: Đăng ký tài khoản
+      tags:
+      - Auth
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: Lấy thông tin hồ sơ công dân
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.ProfileResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lấy thông tin hồ sơ
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Cập nhật thông tin hồ sơ công dân
+      parameters:
+      - description: Thông tin cập nhật
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.ProfileResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ValidationErrors'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật hồ sơ
+      tags:
+      - Profile
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
