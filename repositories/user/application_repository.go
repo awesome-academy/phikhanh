@@ -1,6 +1,7 @@
 package user
 
 import (
+	userDto "phikhanh/dto/user"
 	"phikhanh/models"
 
 	"github.com/google/uuid"
@@ -55,4 +56,41 @@ func (r *ApplicationRepository) CreateWithTransaction(
 
 		return nil
 	})
+}
+
+// FindMyApplications - Lấy danh sách hồ sơ của user với pagination và filter
+func (r *ApplicationRepository) FindMyApplications(
+	userID uuid.UUID,
+	req userDto.MyAppListRequest,
+) ([]models.Application, int64, error) {
+	var applications []models.Application
+	var total int64
+
+	query := r.db.Model(&models.Application{}).
+		Where("user_id = ?", userID)
+
+	// Filter by status nếu có
+	if req.Status != "" {
+		query = query.Where("status = ?", req.Status)
+	}
+
+	// Count total trước khi pagination
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Chỉ preload Service để lấy Name, không preload Attachments/Histories
+	offset := (req.Page - 1) * req.Limit
+	if err := query.
+		Preload("Service", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, name") // Chỉ lấy các field cần thiết
+		}).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(req.Limit).
+		Find(&applications).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return applications, total, nil
 }

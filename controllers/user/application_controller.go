@@ -8,7 +8,6 @@ import (
 	"phikhanh/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ApplicationController struct {
@@ -33,36 +32,18 @@ func NewApplicationController(service *userSvc.ApplicationService) *ApplicationC
 // @Failure      500  {object}  utils.APIResponse
 // @Router       /applications [post]
 func (c *ApplicationController) SubmitApplication(ctx *gin.Context) {
-	// Lấy user_id từ context (set bởi AuthMiddleware)
-	userIDVal, exists := ctx.Get("user_id")
-	if !exists {
-		svcErr := utils.NewUnauthorizedError("Unauthorized")
+	userID, svcErr := utils.ExtractUserID(ctx)
+	if svcErr != nil {
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
-	userIDStr, ok := userIDVal.(string)
-	if !ok {
-		svcErr := utils.NewUnauthorizedError("Invalid user ID")
-		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		svcErr := utils.NewBadRequestError("Invalid user ID format")
-		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
-		return
-	}
-
-	// Parse và validate request body
 	var req userDto.SubmitAppRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.ValidationErrorResponse(ctx, utils.FormatValidationErrorsMap(err))
 		return
 	}
 
-	// Gọi service xử lý business logic
 	response, err := c.service.SubmitApplication(req, userID)
 	if err != nil {
 		if svcErr, ok := err.(*utils.ServiceError); ok {
@@ -75,4 +56,45 @@ func (c *ApplicationController) SubmitApplication(ctx *gin.Context) {
 	}
 
 	utils.SuccessResponse(ctx, http.StatusCreated, "Application submitted successfully", response)
+}
+
+// GetMyApplications godoc
+// @Summary      Danh sách hồ sơ của tôi
+// @Description  Lấy danh sách hồ sơ đã nộp của công dân
+// @Tags         Applications
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page   query int    false "Page number" default(1)
+// @Param        limit  query int    false "Items per page" default(10)
+// @Param        status query string false "Filter by status" Enums(Received,Processing,Supplement_Required,Approved,Rejected)
+// @Success      200  {object}  utils.APIResponse{data=userDto.MyAppListResponse}
+// @Failure      401  {object}  utils.APIResponse
+// @Failure      500  {object}  utils.APIResponse
+// @Router       /applications/me [get]
+func (c *ApplicationController) GetMyApplications(ctx *gin.Context) {
+	userID, svcErr := utils.ExtractUserID(ctx)
+	if svcErr != nil {
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+		return
+	}
+
+	var req userDto.MyAppListRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		utils.ValidationErrorResponse(ctx, utils.FormatValidationErrorsMap(err))
+		return
+	}
+
+	response, err := c.service.GetMyApplications(req, userID)
+	if err != nil {
+		if svcErr, ok := err.(*utils.ServiceError); ok {
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			return
+		}
+		svcErr := utils.NewInternalServerError(err)
+		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+		return
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "Get my applications successful", response)
 }

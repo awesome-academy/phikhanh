@@ -9,7 +9,6 @@ import (
 	"phikhanh/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ProfileController struct {
@@ -31,27 +30,18 @@ func NewProfileController(service *userSvc.ProfileService) *ProfileController {
 // @Failure      401  {object}  utils.APIResponse
 // @Router       /profile [get]
 func (c *ProfileController) GetProfile(ctx *gin.Context) {
-	userID, exists := ctx.Get("user_id")
-	if !exists {
-		svcErr := utils.NewUnauthorizedError("Unauthorized")
+	userID, svcErr := utils.ExtractUserID(ctx)
+	if svcErr != nil {
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
 
-	parsedUUID, err := uuid.Parse(userID.(string))
-	if err != nil {
-		svcErr := utils.NewBadRequestError("Invalid user ID")
-		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
-		return
-	}
-
-	user, err := c.service.GetProfile(parsedUUID)
+	user, err := c.service.GetProfile(userID)
 	if err != nil {
 		if svcErr, ok := err.(*utils.ServiceError); ok {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		// Fallback for unexpected errors
 		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
@@ -93,16 +83,8 @@ func (c *ProfileController) GetProfile(ctx *gin.Context) {
 // @Failure      401  {object}  utils.APIResponse
 // @Router       /profile [put]
 func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
-	userID, exists := ctx.Get("user_id")
-	if !exists {
-		svcErr := utils.NewUnauthorizedError("Unauthorized")
-		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
-		return
-	}
-
-	parsedUUID, err := uuid.Parse(userID.(string))
-	if err != nil {
-		svcErr := utils.NewBadRequestError("Invalid user ID")
+	userID, svcErr := utils.ExtractUserID(ctx)
+	if svcErr != nil {
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return
 	}
@@ -124,7 +106,7 @@ func (c *ProfileController) UpdateProfile(ctx *gin.Context) {
 	}
 
 	user, err := c.service.UpdateProfile(
-		parsedUUID, req.Name, req.Phone, addressStr,
+		userID, req.Name, req.Phone, addressStr,
 		dobStr, req.Gender, req.IsEmailNotify,
 	)
 

@@ -47,6 +47,43 @@ definitions:
       user:
         $ref: '#/definitions/user.UserInfo'
     type: object
+  user.MyAppItemResponse:
+    properties:
+      code:
+        example: HS-20240115-a1b2c3d4
+        type: string
+      created_at:
+        example: "2024-01-15T10:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      service_name:
+        example: Đăng ký kinh doanh
+        type: string
+      status:
+        example: Received
+        type: string
+    type: object
+  user.MyAppListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/user.MyAppItemResponse'
+        type: array
+      limit:
+        example: 10
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total_items:
+        example: 20
+        type: integer
+      total_pages:
+        example: 2
+        type: integer
+    type: object
   user.ProfileResponse:
     properties:
       address:
@@ -355,6 +392,57 @@ paths:
       security:
       - BearerAuth: []
       summary: Nộp hồ sơ
+      tags:
+      - Applications
+  /applications/me:
+    get:
+      consumes:
+      - application/json
+      description: Lấy danh sách hồ sơ đã nộp của công dân
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by status
+        enum:
+        - Received
+        - Processing
+        - Supplement_Required
+        - Approved
+        - Rejected
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.MyAppListResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Danh sách hồ sơ của tôi
       tags:
       - Applications
   /auth/login:

@@ -21,16 +21,7 @@ func NewServiceService(repo *userRepo.ServiceRepository) *ServiceService {
 
 // Lấy danh sách services
 func (s *ServiceService) GetServiceList(req userDto.ServiceListRequest) (*userDto.ServiceListResponse, error) {
-	// Set default values nếu không được truyền
-	if req.Page <= 0 {
-		req.Page = 1
-	}
-	if req.Limit <= 0 {
-		req.Limit = 10
-	}
-	if req.Limit > 100 {
-		req.Limit = 100
-	}
+	// Không cần set default ở đây nữa, đã handle ở DTO
 
 	// Parse department_id - trả về lỗi nếu không hợp lệ
 	var departmentID *uuid.UUID

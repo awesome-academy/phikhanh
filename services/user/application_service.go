@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	userDto "phikhanh/dto/user"
@@ -86,4 +87,41 @@ func generateApplicationCode() string {
 	timestamp := time.Now().Format("20060102")
 	shortID := uuid.New().String()[:8]
 	return fmt.Sprintf("HS-%s-%s", timestamp, shortID)
+}
+
+// GetMyApplications - Lấy danh sách hồ sơ của user
+func (s *ApplicationService) GetMyApplications(req userDto.MyAppListRequest, userID uuid.UUID) (*userDto.MyAppListResponse, error) {
+	// Không cần set default ở đây nữa, đã handle ở DTO
+	applications, total, err := s.repo.FindMyApplications(userID, req)
+	if err != nil {
+		return nil, utils.NewInternalServerError(err)
+	}
+
+	// Map models -> DTO, đảm bảo trả về [] thay vì null khi rỗng
+	items := make([]userDto.MyAppItemResponse, 0, len(applications))
+	for _, app := range applications {
+		item := userDto.MyAppItemResponse{
+			ID:        app.ID.String(),
+			Code:      app.Code,
+			Status:    string(app.Status),
+			CreatedAt: app.CreatedAt.Format(time.RFC3339),
+		}
+
+		// Lấy service name nếu đã preload
+		if app.Service != nil {
+			item.ServiceName = app.Service.Name
+		}
+
+		items = append(items, item)
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
+
+	return &userDto.MyAppListResponse{
+		Items:      items,
+		Page:       req.Page,
+		Limit:      req.Limit,
+		TotalItems: total,
+		TotalPages: totalPages,
+	}, nil
 }

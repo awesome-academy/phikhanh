@@ -85,6 +85,7 @@ func SetupUserRoutes(router *gin.Engine) {
 		applications.Use(middlewares.AuthMiddleware())
 		{
 			applications.POST("", appController.SubmitApplication)
+			applications.GET("/me", appController.GetMyApplications)
 		}
 	}
 }
