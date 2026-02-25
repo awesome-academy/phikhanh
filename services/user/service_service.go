@@ -21,8 +21,6 @@ func NewServiceService(repo *userRepo.ServiceRepository) *ServiceService {
 
 // Lấy danh sách services
 func (s *ServiceService) GetServiceList(req userDto.ServiceListRequest) (*userDto.ServiceListResponse, error) {
-	// Không cần set default ở đây nữa, đã handle ở DTO
-
 	// Parse department_id - trả về lỗi nếu không hợp lệ
 	var departmentID *uuid.UUID
 	if req.DepartmentID != "" {

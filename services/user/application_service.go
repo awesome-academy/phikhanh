@@ -42,10 +42,6 @@ func (s *ApplicationService) SubmitApplication(req userDto.SubmitAppRequest, use
 	code := generateApplicationCode()
 
 	// Map DTO -> Application model
-	// AssignedStaffID KHÔNG gán lúc submit vì:
-	// - Citizen chỉ nộp hồ sơ, chưa có staff xử lý
-	// - Staff sẽ được assign sau bởi Manager/Admin
-	// - Status mặc định là "Received", chưa cần staff
 	app := &models.Application{
 		Code:            code,
 		UserID:          userID,
@@ -91,13 +87,12 @@ func generateApplicationCode() string {
 
 // GetMyApplications - Lấy danh sách hồ sơ của user
 func (s *ApplicationService) GetMyApplications(req userDto.MyAppListRequest, userID uuid.UUID) (*userDto.MyAppListResponse, error) {
-	// Không cần set default ở đây nữa, đã handle ở DTO
 	applications, total, err := s.repo.FindMyApplications(userID, req)
 	if err != nil {
 		return nil, utils.NewInternalServerError(err)
 	}
 
-	// Map models -> DTO, đảm bảo trả về [] thay vì null khi rỗng
+	// Map models -> DTO
 	items := make([]userDto.MyAppItemResponse, 0, len(applications))
 	for _, app := range applications {
 		item := userDto.MyAppItemResponse{

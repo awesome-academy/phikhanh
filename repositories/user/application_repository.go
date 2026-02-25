@@ -79,7 +79,6 @@ func (r *ApplicationRepository) FindMyApplications(
 		return nil, 0, err
 	}
 
-	// Chỉ preload Service để lấy Name, không preload Attachments/Histories
 	offset := (req.Page - 1) * req.Limit
 	if err := query.
 		Preload("Service", func(db *gorm.DB) *gorm.DB {
