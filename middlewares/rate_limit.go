@@ -1,0 +1,106 @@
+package middlewares
+
+import (
+	"sync"
+	"time"
+
+	"phikhanh/utils"
+
+	"github.com/gin-gonic/gin"
+)
+
+// uploadRecord - Lưu trữ thông tin upload của user
+type uploadRecord struct {
+	count     int
+	totalSize int64
+	resetAt   time.Time
+}
+
+var (
+	uploadRecords = make(map[string]*uploadRecord)
+	mu            sync.Mutex
+
+	// Giới hạn upload trong 1 giờ
+	maxUploadsPerHour   = 20
+	maxTotalSizePerHour = int64(50 << 20) // 50MB per hour
+	windowDuration      = time.Hour
+)
+
+// UploadRateLimitMiddleware - Middleware giới hạn số lần upload per user
+func UploadRateLimitMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, exists := ctx.Get("user_id")
+		if !exists {
+			svcErr := utils.NewUnauthorizedError("Unauthorized")
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			ctx.Abort()
+			return
+		}
+
+		userIDStr, ok := userID.(string)
+		if !ok {
+			svcErr := utils.NewUnauthorizedError("Invalid user ID")
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			ctx.Abort()
+			return
+		}
+
+		// Lấy file size từ request
+		file, err := ctx.FormFile("file")
+		if err != nil {
+			ctx.Next()
+			return
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		record, exists := uploadRecords[userIDStr]
+		now := time.Now()
+
+		// Reset record nếu đã qua thời gian window
+		if !exists || now.After(record.resetAt) {
+			uploadRecords[userIDStr] = &uploadRecord{
+				count:     0,
+				totalSize: 0,
+				resetAt:   now.Add(windowDuration),
+			}
+			record = uploadRecords[userIDStr]
+		}
+
+		// Kiểm tra số lần upload
+		if record.count >= maxUploadsPerHour {
+			svcErr := utils.NewBadRequestError("Upload limit exceeded (max 20 uploads per hour)")
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			ctx.Abort()
+			return
+		}
+
+		// Kiểm tra tổng dung lượng
+		if record.totalSize+file.Size > maxTotalSizePerHour {
+			svcErr := utils.NewBadRequestError("Upload size limit exceeded (max 50MB per hour)")
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			ctx.Abort()
+			return
+		}
+
+		// Cập nhật record
+		record.count++
+		record.totalSize += file.Size
+
+		ctx.Next()
+	}
+}
+
+// CleanupUploadRecords - Dọn dẹp records đã hết hạn (gọi định kỳ)
+func CleanupUploadRecords() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	now := time.Now()
+	for userID, record := range uploadRecords {
+		if now.After(record.resetAt) {
+			delete(uploadRecords, userID)
+		}
+	}
+}

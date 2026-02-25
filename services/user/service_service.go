@@ -32,13 +32,14 @@ func (s *ServiceService) GetServiceList(req userDto.ServiceListRequest) (*userDt
 		req.Limit = 100
 	}
 
-	// Parse department_id
+	// Parse department_id - trả về lỗi nếu không hợp lệ
 	var departmentID *uuid.UUID
 	if req.DepartmentID != "" {
 		id, err := uuid.Parse(req.DepartmentID)
-		if err == nil {
-			departmentID = &id
+		if err != nil {
+			return nil, utils.NewBadRequestError("Invalid department_id format")
 		}
+		departmentID = &id
 	}
 
 	// Get services from repository

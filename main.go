@@ -3,12 +3,14 @@ package main
 import (
 	"log"
 	"phikhanh/config"
+	"phikhanh/middlewares"
 	"phikhanh/routes"
 	"phikhanh/utils"
 
 	"github.com/gin-gonic/gin"
 
 	_ "phikhanh/docs"
+	"time"
 )
 
 // @title           Public Service Management API
@@ -58,6 +60,15 @@ func main() {
 	serverAddr := ":" + config.AppConfig.ServerPort
 	log.Printf("Server starting on port %s", config.AppConfig.ServerPort)
 	log.Printf("Swagger UI: http://localhost:%s/docs/index.html", config.AppConfig.ServerPort)
+
+	// Dọn dẹp upload records định kỳ mỗi giờ
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			middlewares.CleanupUploadRecords()
+		}
+	}()
 
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

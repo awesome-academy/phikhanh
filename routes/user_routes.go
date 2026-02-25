@@ -66,7 +66,11 @@ func SetupUserRoutes(router *gin.Engine) {
 			services.GET("/:id", serviceController.GetServiceDetail)
 		}
 
-		// Upload routes (protected)
-		api.POST("/upload", middlewares.AuthMiddleware(), uploadController.UploadFile)
+		// Upload routes (protected + rate limited)
+		api.POST("/upload",
+			middlewares.AuthMiddleware(),
+			middlewares.UploadRateLimitMiddleware(),
+			uploadController.UploadFile,
+		)
 	}
 }
