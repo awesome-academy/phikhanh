@@ -539,6 +539,14 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/utils.APIResponse'
+        "429":
+          description: Too Many Requests - respect Retry-After header
+          headers:
+            Retry-After:
+              description: Number of seconds to wait before retrying the upload
+              type: string
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
       security:
       - BearerAuth: []
       summary: Upload file

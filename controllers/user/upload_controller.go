@@ -26,6 +26,8 @@ func NewUploadController() *UploadController {
 // @Success      200  {object}  utils.APIResponse{data=userDto.UploadFileResponse}
 // @Failure      400  {object}  utils.APIResponse
 // @Failure      401  {object}  utils.APIResponse
+// @Failure      429  {object}  utils.APIResponse  "Too Many Requests - respect Retry-After header"
+// @Header       429  {string}  Retry-After  "Number of seconds to wait before retrying the upload"
 // @Router       /upload [post]
 func (c *UploadController) UploadFile(ctx *gin.Context) {
 	// Get file from form

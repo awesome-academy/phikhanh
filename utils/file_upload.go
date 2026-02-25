@@ -170,8 +170,8 @@ func DeleteFile(filePath string) error {
 		return NewInternalServerError(err)
 	}
 
-	// Nếu relative path bắt đầu bằng ".." thì file nằm ngoài allowed directory
-	if strings.HasPrefix(rel, "..") {
+	// Nếu relative path là ".." hoặc bắt đầu bằng ".." + path separator thì file nằm ngoài allowed directory
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 		return NewBadRequestError("Invalid file path")
 	}
 
