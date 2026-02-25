@@ -37,11 +37,14 @@ func NewNotFoundError(message string) *ServiceError {
 	return NewServiceError(404, message)
 }
 
-// NewInternalServerError - Trả về error 500 với message cụ thể từ error
 func NewInternalServerError(err error) *ServiceError {
 	return &ServiceError{
 		StatusCode: 500,
 		Message:    "An error occurred, please try again later",
 		Err:        err,
 	}
+}
+
+func NewTooManyRequestsError(message string) *ServiceError {
+	return NewServiceError(429, message)
 }
