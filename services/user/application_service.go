@@ -87,12 +87,20 @@ func generateApplicationCode() string {
 
 // GetMyApplications - Lấy danh sách hồ sơ của user
 func (s *ApplicationService) GetMyApplications(req userDto.MyAppListRequest, userID uuid.UUID) (*userDto.MyAppListResponse, error) {
+	// Pagination defaults ĐÃ được set ở controller
+	// Thêm defensive check để an toàn
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Limit <= 0 || req.Limit > 100 {
+		req.Limit = 10
+	}
+
 	applications, total, err := s.repo.FindMyApplications(userID, req)
 	if err != nil {
 		return nil, utils.NewInternalServerError(err)
 	}
 
-	// Map models -> DTO
 	items := make([]userDto.MyAppItemResponse, 0, len(applications))
 	for _, app := range applications {
 		item := userDto.MyAppItemResponse{
@@ -102,7 +110,6 @@ func (s *ApplicationService) GetMyApplications(req userDto.MyAppListRequest, use
 			CreatedAt: app.CreatedAt.Format(time.RFC3339),
 		}
 
-		// Lấy service name nếu đã preload
 		if app.Service != nil {
 			item.ServiceName = app.Service.Name
 		}
@@ -110,6 +117,7 @@ func (s *ApplicationService) GetMyApplications(req userDto.MyAppListRequest, use
 		items = append(items, item)
 	}
 
+	// Safe: req.Limit > 0 vì đã validate ở controller
 	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
 
 	return &userDto.MyAppListResponse{

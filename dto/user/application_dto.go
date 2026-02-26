@@ -9,7 +9,7 @@ type AttachmentDTO struct {
 // SubmitAppRequest - Request nộp hồ sơ
 type SubmitAppRequest struct {
 	ServiceID   string          `json:"service_id" binding:"required,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Attachments []AttachmentDTO `json:"attachments" binding:"omitempty,dive,required"`
+	Attachments []AttachmentDTO `json:"attachments,omitempty" binding:"omitempty,dive,required"`
 }
 
 // SubmitAppResponse - Response sau khi nộp hồ sơ
@@ -20,8 +20,8 @@ type SubmitAppResponse struct {
 
 // MyAppListRequest - Query params cho danh sách hồ sơ của tôi
 type MyAppListRequest struct {
-	Page   int    `form:"page" binding:"omitempty,min=1" default:"1" example:"1"`
-	Limit  int    `form:"limit" binding:"omitempty,min=1,max=100" default:"10" example:"10"`
+	Page   int    `form:"page" binding:"omitempty,min=1" example:"1"`
+	Limit  int    `form:"limit" binding:"omitempty,min=1,max=100" example:"10"`
 	Status string `form:"status" binding:"omitempty,oneof=Received Processing Supplement_Required Approved Rejected" example:"Received"`
 }
 

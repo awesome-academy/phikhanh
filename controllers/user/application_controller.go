@@ -85,6 +85,17 @@ func (c *ApplicationController) GetMyApplications(ctx *gin.Context) {
 		return
 	}
 
+	// Enforce pagination defaults BEFORE calling service
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Limit <= 0 {
+		req.Limit = 10
+	}
+	if req.Limit > 100 {
+		req.Limit = 100
+	}
+
 	response, err := c.service.GetMyApplications(req, userID)
 	if err != nil {
 		if svcErr, ok := err.(*utils.ServiceError); ok {

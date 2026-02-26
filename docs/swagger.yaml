@@ -717,7 +717,8 @@ paths:
       - Upload
 securityDefinitions:
   BearerAuth:
-    description: Enter your JWT token. The "Bearer " prefix will be added automatically.
+    description: Provide your JWT token for the Authorization header (with or without
+      the "Bearer " prefix).
     in: header
     name: Authorization
     type: apiKey

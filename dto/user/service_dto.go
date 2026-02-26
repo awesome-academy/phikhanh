@@ -2,8 +2,8 @@ package user
 
 // Request query params cho danh sách services (tất cả optional)
 type ServiceListRequest struct {
-	Page         int    `form:"page" binding:"omitempty,min=1" default:"1" example:"1"`
-	Limit        int    `form:"limit" binding:"omitempty,min=1,max=100" default:"10" example:"10"`
+	Page         int    `form:"page" binding:"omitempty,min=1" example:"1"`
+	Limit        int    `form:"limit" binding:"omitempty,min=1,max=100" example:"10"`
 	Keyword      string `form:"keyword" binding:"omitempty" example:"Đăng ký kinh doanh"`
 	Sector       string `form:"sector" binding:"omitempty" example:"Health"`
 	DepartmentID string `form:"department_id" binding:"omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
