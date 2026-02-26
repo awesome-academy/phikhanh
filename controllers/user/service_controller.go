@@ -40,13 +40,23 @@ func (c *ServiceController) GetServiceList(ctx *gin.Context) {
 		return
 	}
 
+	// Enforce pagination defaults BEFORE calling service
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Limit <= 0 {
+		req.Limit = 10
+	}
+	if req.Limit > 100 {
+		req.Limit = 100
+	}
+
 	response, err := c.service.GetServiceList(req)
 	if err != nil {
 		if svcErr, ok := err.(*utils.ServiceError); ok {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		// Fallback for unexpected errors
 		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return

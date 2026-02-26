@@ -1,5 +1,17 @@
 basePath: /api/v1
 definitions:
+  user.AttachmentDTO:
+    properties:
+      file_name:
+        example: document.jpg
+        type: string
+      file_path:
+        example: /assets/images/20240115_a1b2c3d4.jpg
+        type: string
+    required:
+    - file_name
+    - file_path
+    type: object
   user.DepartmentInfo:
     properties:
       address:
@@ -21,7 +33,7 @@ definitions:
         example: "001234567890"
         type: string
       password:
-        example: password123
+        example: Aa@123456
         type: string
     required:
     - citizen_id
@@ -34,6 +46,43 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/user.UserInfo'
+    type: object
+  user.MyAppItemResponse:
+    properties:
+      code:
+        example: HS-20240115-a1b2c3d4
+        type: string
+      created_at:
+        example: "2024-01-15T10:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      service_name:
+        example: Đăng ký kinh doanh
+        type: string
+      status:
+        example: Received
+        type: string
+    type: object
+  user.MyAppListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/user.MyAppItemResponse'
+        type: array
+      limit:
+        example: 10
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total_items:
+        example: 20
+        type: integer
+      total_pages:
+        example: 2
+        type: integer
     type: object
   user.ProfileResponse:
     properties:
@@ -96,7 +145,7 @@ definitions:
         example: Nguyễn Văn A
         type: string
       password:
-        example: Password@123
+        example: Aa@123456
         type: string
       phone:
         example: "0901234567"
@@ -180,6 +229,28 @@ definitions:
       total_pages:
         example: 5
         type: integer
+    type: object
+  user.SubmitAppRequest:
+    properties:
+      attachments:
+        items:
+          $ref: '#/definitions/user.AttachmentDTO'
+        type: array
+      service_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    required:
+    - attachments
+    - service_id
+    type: object
+  user.SubmitAppResponse:
+    properties:
+      code:
+        example: HS-20240115-a1b2c3d4
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
     type: object
   user.UpdateProfileRequest:
     properties:
@@ -282,6 +353,98 @@ info:
   title: Public Service Management API
   version: "1.0"
 paths:
+  /applications:
+    post:
+      consumes:
+      - application/json
+      description: Công dân nộp hồ sơ dịch vụ công
+      parameters:
+      - description: Thông tin hồ sơ
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.SubmitAppRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.SubmitAppResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ValidationErrors'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Nộp hồ sơ
+      tags:
+      - Applications
+  /applications/me:
+    get:
+      consumes:
+      - application/json
+      description: Lấy danh sách hồ sơ đã nộp của công dân
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by status
+        enum:
+        - Received
+        - Processing
+        - Supplement_Required
+        - Approved
+        - Rejected
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.MyAppListResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Danh sách hồ sơ của tôi
+      tags:
+      - Applications
   /auth/login:
     post:
       consumes:
@@ -554,7 +717,8 @@ paths:
       - Upload
 securityDefinitions:
   BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
+    description: Provide your JWT token for the Authorization header (with or without
+      the "Bearer " prefix).
     in: header
     name: Authorization
     type: apiKey

@@ -30,7 +30,7 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @description Provide your JWT token for the Authorization header (with or without the "Bearer " prefix).
 func main() {
 	// Khởi tạo cấu hình
 	config.LoadConfig()

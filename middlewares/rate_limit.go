@@ -30,21 +30,15 @@ var (
 // UploadRateLimitMiddleware - Middleware giới hạn số lần upload per user
 func UploadRateLimitMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		userID, exists := ctx.Get("user_id")
-		if !exists {
-			svcErr := utils.NewUnauthorizedError("Unauthorized")
+		// Dùng ExtractUserID
+		userID, svcErr := utils.ExtractUserID(ctx)
+		if svcErr != nil {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			ctx.Abort()
 			return
 		}
 
-		userIDStr, ok := userID.(string)
-		if !ok {
-			svcErr := utils.NewUnauthorizedError("Invalid user ID")
-			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
-			ctx.Abort()
-			return
-		}
+		userIDStr := userID.String()
 
 		// Lấy file size từ request
 		file, err := ctx.FormFile("file")

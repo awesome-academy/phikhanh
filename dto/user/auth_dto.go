@@ -3,7 +3,7 @@ package user
 // Request đăng ký tài khoản
 type RegisterRequest struct {
 	CitizenID   string `json:"citizen_id" binding:"required,citizen_id" example:"001234567890"`
-	Password    string `json:"password" binding:"required,strong_password" example:"Password@123"`
+	Password    string `json:"password" binding:"required,strong_password" example:"Aa@123456"`
 	Name        string `json:"name" binding:"required" example:"Nguyễn Văn A"`
 	Email       string `json:"email" binding:"required,email" example:"nguyenvana@example.com"`
 	Phone       string `json:"phone" binding:"required,vn_phone" example:"0901234567"`
@@ -15,7 +15,7 @@ type RegisterRequest struct {
 // Request đăng nhập
 type LoginRequest struct {
 	CitizenID string `json:"citizen_id" binding:"required" example:"001234567890"`
-	Password  string `json:"password" binding:"required" example:"password123"`
+	Password  string `json:"password" binding:"required" example:"Aa@123456"`
 }
 
 // Response sau khi đăng nhập thành công

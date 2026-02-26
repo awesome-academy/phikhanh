@@ -21,15 +21,13 @@ func NewServiceService(repo *userRepo.ServiceRepository) *ServiceService {
 
 // Lấy danh sách services
 func (s *ServiceService) GetServiceList(req userDto.ServiceListRequest) (*userDto.ServiceListResponse, error) {
-	// Set default values nếu không được truyền
+	// Pagination defaults ĐÃ được set ở controller
+	// Không cần check lại ở đây, nhưng có thể add defensive check
 	if req.Page <= 0 {
 		req.Page = 1
 	}
-	if req.Limit <= 0 {
+	if req.Limit <= 0 || req.Limit > 100 {
 		req.Limit = 10
-	}
-	if req.Limit > 100 {
-		req.Limit = 100
 	}
 
 	// Parse department_id - trả về lỗi nếu không hợp lệ
@@ -42,13 +40,11 @@ func (s *ServiceService) GetServiceList(req userDto.ServiceListRequest) (*userDt
 		departmentID = &id
 	}
 
-	// Get services from repository
 	services, total, err := s.repo.GetServiceList(req.Page, req.Limit, req.Keyword, req.Sector, departmentID)
 	if err != nil {
 		return nil, utils.NewInternalServerError(err)
 	}
 
-	// Map to DTO
 	items := make([]userDto.ServiceListItem, 0, len(services))
 	for _, service := range services {
 		item := userDto.ServiceListItem{
@@ -65,7 +61,7 @@ func (s *ServiceService) GetServiceList(req userDto.ServiceListRequest) (*userDt
 		items = append(items, item)
 	}
 
-	// Calculate total pages
+	// Safe: req.Limit > 0 vì đã validate ở controller
 	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
 
 	return &userDto.ServiceListResponse{
