@@ -2,6 +2,15 @@ package utils
 
 import "fmt"
 
+// Common error messages
+const (
+	MsgUnauthorized       = "Unauthorized"
+	MsgInvalidCredentials = "Invalid email or password"
+	MsgInternalError      = "An error occurred, please try again later"
+	MsgInvalidUserID      = "Invalid user ID"
+	MsgInvalidFormat      = "Invalid format"
+)
+
 // ServiceError - Struct chứa status code và message để trả về từ service
 type ServiceError struct {
 	StatusCode int
@@ -40,7 +49,7 @@ func NewNotFoundError(message string) *ServiceError {
 func NewInternalServerError(err error) *ServiceError {
 	return &ServiceError{
 		StatusCode: 500,
-		Message:    "An error occurred, please try again later",
+		Message:    MsgInternalError,
 		Err:        err,
 	}
 }

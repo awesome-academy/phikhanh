@@ -2,15 +2,16 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"phikhanh/config"
 	"phikhanh/middlewares"
 	"phikhanh/routes"
 	"phikhanh/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	_ "phikhanh/docs"
-	"time"
 )
 
 // @title           Public Service Management API
@@ -48,17 +49,23 @@ func main() {
 	router := gin.Default()
 
 	// Load HTML templates
-	router.LoadHTMLGlob("templates/**/*")
+	router.SetHTMLTemplate(utils.LoadTemplates("templates"))
 
 	// Serve static files
 	router.Static("/assets", "./assets")
 
 	// Thiết lập routes
-	routes.SetupRoutes(router)
+	router.GET("/", func(ctx *gin.Context) {
+		ctx.Redirect(http.StatusMovedPermanently, "/admin/login")
+	})
+
+	routes.SetupUserRoutes(router)
+	routes.SetupAdminRoutes(router)
 
 	// Khởi động server
 	serverAddr := ":" + config.AppConfig.ServerPort
 	log.Printf("Server starting on port %s", config.AppConfig.ServerPort)
+	log.Printf("Admin: http://localhost:%s/admin/login", config.AppConfig.ServerPort)
 	log.Printf("Swagger UI: http://localhost:%s/docs/index.html", config.AppConfig.ServerPort)
 
 	// Dọn dẹp upload records định kỳ mỗi giờ
