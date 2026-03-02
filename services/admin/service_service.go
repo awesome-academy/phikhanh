@@ -46,14 +46,14 @@ func (s *ServiceAdminService) GetByID(id uuid.UUID) (*models.Service, error) {
 
 func (s *ServiceAdminService) Create(service *models.Service) error {
 	if err := s.repo.Create(service); err != nil {
-		return utils.NewInternalServerError(err)
+		return utils.ParseDBError(err)
 	}
 	return nil
 }
 
 func (s *ServiceAdminService) Update(service *models.Service) error {
 	if err := s.repo.Update(service); err != nil {
-		return utils.NewInternalServerError(err)
+		return utils.ParseDBError(err)
 	}
 	return nil
 }
@@ -63,7 +63,7 @@ func (s *ServiceAdminService) Delete(id uuid.UUID) error {
 		return err
 	}
 	if err := s.repo.Delete(id); err != nil {
-		return utils.NewInternalServerError(err)
+		return utils.ParseDBError(err)
 	}
 	return nil
 }

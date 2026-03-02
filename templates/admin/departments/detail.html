@@ -1,0 +1,58 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="max-w-2xl space-y-6">
+    <div class="flex gap-3">
+        <a href="/admin/departments/{{ .Department.ID }}/edit"
+           class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-medium rounded-lg transition">
+            Edit
+        </a>
+        <form action="/admin/departments/{{ .Department.ID }}/delete" method="POST"
+              onsubmit="return confirm('Delete this department?')">
+            <button type="submit"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition">
+                Delete
+            </button>
+        </form>
+        <a href="/admin/departments"
+           class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition">
+            ← Back
+        </a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-semibold text-gray-900">Department Information</h3>
+        </div>
+        <div class="divide-y divide-gray-100">
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Code</span>
+                <span class="col-span-2 text-sm font-mono text-gray-900">{{ .Department.Code }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Name</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Department.Name }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Leader</span>
+                <span class="col-span-2 text-sm text-gray-900">
+                    {{ if .Department.LeaderName }}{{ .Department.LeaderName }}{{ else }}-{{ end }}
+                </span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Address</span>
+                <span class="col-span-2 text-sm text-gray-900">
+                    {{ if .Department.Address }}{{ .Department.Address }}{{ else }}-{{ end }}
+                </span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Created At</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .CreatedAt }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Updated At</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .UpdatedAt }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

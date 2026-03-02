@@ -7,9 +7,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-// pageTemplates - Lưu tất cả template sets (kể cả standalone như login)
+// templateFuncs - Custom template functions
+var templateFuncs = template.FuncMap{
+	"codeNumber": func(code string) string {
+		if idx := strings.LastIndex(code, "-"); idx != -1 {
+			return code[idx+1:]
+		}
+		return code
+	},
+}
+
 var pageTemplates = map[string]*template.Template{}
 
 // LoadTemplates - Load tất cả templates, mỗi page có template set riêng
@@ -24,12 +34,12 @@ func LoadTemplates(dir string) *template.Template {
 		}
 	}
 
-	// Parse login standalone vào pageTemplates (không dùng layout)
+	// Parse login standalone với funcs
 	loginContent, err := os.ReadFile(loginFile)
 	if err != nil {
 		log.Fatalf("Failed to read login.html: %v", err)
 	}
-	loginTmpl, err := template.New("admin/auth/login.html").Parse(string(loginContent))
+	loginTmpl, err := template.New("admin/auth/login.html").Funcs(templateFuncs).Parse(string(loginContent))
 	if err != nil {
 		log.Fatalf("Failed to parse login.html: %v", err)
 	}
@@ -53,7 +63,8 @@ func LoadTemplates(dir string) *template.Template {
 	for _, pageFile := range pageFiles {
 		name, _ := filepath.Rel(dir, pageFile)
 
-		tmpl, err := template.New("base").ParseFiles(layoutFile, pageFile)
+		// Thêm Funcs vào template set
+		tmpl, err := template.New("base").Funcs(templateFuncs).ParseFiles(layoutFile, pageFile)
 		if err != nil {
 			log.Fatalf("Failed to parse template [%s]: %v", name, err)
 		}
@@ -66,6 +77,7 @@ func LoadTemplates(dir string) *template.Template {
 		log.Printf("✓ Template loaded: %s", name)
 	}
 
+	_ = fmt.Sprintf // avoid unused import
 	return template.New("root")
 }
 

@@ -16,15 +16,19 @@ func SetupAdminRoutes(router *gin.Engine) {
 	authService := adminSvc.NewAuthService(authRepo)
 	authController := admin.NewAuthController(authService)
 
-	// Service CRUD
+	// Services CRUD
 	svcRepo := adminRepo.NewServiceRepository(config.GetDB())
 	svcService := adminSvc.NewServiceAdminService(svcRepo)
 	serviceController := admin.NewServiceController(svcService)
 
+	// Departments CRUD
+	deptRepo := adminRepo.NewDepartmentRepository(config.GetDB())
+	deptService := adminSvc.NewDepartmentService(deptRepo)
+	departmentController := admin.NewDepartmentController(deptService)
+
 	// Other controllers
 	dashboardController := admin.NewDashboardController()
 	userController := admin.NewUserController()
-	departmentController := admin.NewDepartmentController()
 	applicationController := admin.NewApplicationController()
 	activityLogController := admin.NewActivityLogController()
 
@@ -39,7 +43,6 @@ func SetupAdminRoutes(router *gin.Engine) {
 		{
 			protected.GET("/dashboard", dashboardController.ShowDashboard)
 			protected.GET("/users", userController.ShowUsers)
-			protected.GET("/departments", departmentController.ShowDepartments)
 			protected.GET("/applications", applicationController.ShowApplications)
 			protected.GET("/activity-logs", activityLogController.ShowActivityLogs)
 
@@ -53,6 +56,18 @@ func SetupAdminRoutes(router *gin.Engine) {
 				services.GET("/:id/edit", serviceController.EditForm)
 				services.POST("/:id/edit", serviceController.EditSave)
 				services.POST("/:id/delete", serviceController.Delete)
+			}
+
+			// Departments CRUD
+			departments := protected.Group("/departments")
+			{
+				departments.GET("", departmentController.List)
+				departments.GET("/create", departmentController.CreateForm)
+				departments.POST("/create", departmentController.CreateSave)
+				departments.GET("/:id", departmentController.Detail)
+				departments.GET("/:id/edit", departmentController.EditForm)
+				departments.POST("/:id/edit", departmentController.EditSave)
+				departments.POST("/:id/delete", departmentController.Delete)
 			}
 		}
 	}
