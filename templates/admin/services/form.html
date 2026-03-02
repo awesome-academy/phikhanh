@@ -1,0 +1,93 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="max-w-2xl">
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+
+        {{ if .Error }}
+        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-red-700 text-sm font-medium">{{ .Error }}</p>
+        </div>
+        {{ end }}
+
+        <form action="{{ .FormAction }}" method="POST" class="space-y-4">
+
+            <!-- Code -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Code <span class="text-red-500">*</span></label>
+                <input type="text" name="code" value="{{ .Service.Code }}" required
+                       placeholder="e.g. SV001"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Name -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
+                <input type="text" name="name" value="{{ .Service.Name }}" required
+                       placeholder="e.g. Business Registration"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Sector -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Sector</label>
+                <select name="sector"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Select Sector --</option>
+                    {{ $sector := .Service.Sector }}
+                    {{ range .Sectors }}
+                    <option value="{{ . }}" {{ if eq . $sector }}selected{{ end }}>{{ . }}</option>
+                    {{ end }}
+                </select>
+            </div>
+
+            <!-- Department -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                <select name="department_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Select Department --</option>
+                    {{ range .Departments }}
+                    <option value="{{ .ID }}" {{ if eq .ID $.Service.DepartmentID }}selected{{ end }}>{{ .Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea name="description" rows="3"
+                          placeholder="Service description..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ .Service.Description }}</textarea>
+            </div>
+
+            <!-- Processing Days & Fee -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Processing Days</label>
+                    <input type="number" name="processing_days" value="{{ .Service.ProcessingDays }}" min="0"
+                           placeholder="e.g. 5"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fee (VND)</label>
+                    <input type="number" name="fee" value="{{ if .Service.Fee }}{{ .Service.Fee }}{{ end }}" min="0"
+                           placeholder="e.g. 500000"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                    {{ .SubmitLabel }}
+                </button>
+                <a href="/admin/services"
+                   class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{{ end }}

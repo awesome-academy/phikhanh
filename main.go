@@ -48,6 +48,11 @@ func main() {
 	// Khởi tạo Gin router
 	router := gin.Default()
 
+	// Suppress Chrome DevTools auto-discovery request
+	router.GET("/.well-known/appspecific/com.chrome.devtools.json", func(ctx *gin.Context) {
+		ctx.Status(http.StatusNoContent)
+	})
+
 	// Load HTML templates
 	router.SetHTMLTemplate(utils.LoadTemplates("templates"))
 
