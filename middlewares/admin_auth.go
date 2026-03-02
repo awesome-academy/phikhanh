@@ -46,9 +46,9 @@ func AdminAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// clearAdminCookies - Xóa tất cả admin cookies
+// clearAdminCookies - Xóa tất cả admin cookies với HttpOnly=true (match với lúc set)
 func clearAdminCookies(ctx *gin.Context) {
 	ctx.SetCookie("admin_token", "", -1, "/admin", "", false, true)
-	ctx.SetCookie("admin_name", "", -1, "/admin", "", false, false)
-	ctx.SetCookie("admin_role", "", -1, "/admin", "", false, false)
+	ctx.SetCookie("admin_name", "", -1, "/admin", "", false, true)
+	ctx.SetCookie("admin_role", "", -1, "/admin", "", false, true)
 }

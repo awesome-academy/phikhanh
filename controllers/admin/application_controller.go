@@ -14,5 +14,5 @@ func NewApplicationController() *ApplicationController {
 }
 
 func (c *ApplicationController) ShowApplications(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "admin/applications.html", utils.GetAdminData(ctx, "Applications", "applications"))
+	utils.RenderHTML(ctx, http.StatusOK, "admin/applications.html", utils.GetAdminData(ctx, "Applications", "applications"))
 }

@@ -14,5 +14,5 @@ func NewActivityLogController() *ActivityLogController {
 }
 
 func (c *ActivityLogController) ShowActivityLogs(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "admin/activity_logs.html", utils.GetAdminData(ctx, "Activity Log", "activity-logs"))
+	utils.RenderHTML(ctx, http.StatusOK, "admin/activity_logs.html", utils.GetAdminData(ctx, "Activity Log", "activity-logs"))
 }

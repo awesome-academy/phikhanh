@@ -14,5 +14,5 @@ func NewDepartmentController() *DepartmentController {
 }
 
 func (c *DepartmentController) ShowDepartments(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "admin/departments.html", utils.GetAdminData(ctx, "Departments", "departments"))
+	utils.RenderHTML(ctx, http.StatusOK, "admin/departments.html", utils.GetAdminData(ctx, "Departments", "departments"))
 }

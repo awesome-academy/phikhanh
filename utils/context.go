@@ -19,7 +19,7 @@ func ExtractUserID(ctx *gin.Context) (uuid.UUID, *ServiceError) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return uuid.Nil, NewBadRequestError(MsgInvalidUserID)
+		return uuid.Nil, NewBadRequestError(MsgInvalidUserID + ": " + MsgInvalidUUIDFormat)
 	}
 
 	return userID, nil
@@ -39,7 +39,7 @@ func ExtractAdminID(ctx *gin.Context) (uuid.UUID, *ServiceError) {
 
 	adminID, err := uuid.Parse(adminIDStr)
 	if err != nil {
-		return uuid.Nil, NewBadRequestError(MsgInvalidUserID)
+		return uuid.Nil, NewBadRequestError(MsgInvalidUserID + ": " + MsgInvalidUUIDFormat)
 	}
 
 	return adminID, nil

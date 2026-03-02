@@ -1,100 +1,84 @@
 package utils
 
 import (
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-const (
-	layoutDirective = `{{ template "admin/layout/base.html" . }}`
-	contentBlock    = `{{ block "content" . }}{{ end }}`
-	contentDefine   = `{{ define "content" }}`
-	contentEnd      = `{{ end }}`
-)
+// pageTemplates - Lưu từng page template set riêng biệt
+// key: template name (e.g. "admin/dashboard.html")
+// value: template set chứa cả "base" và "content"
+var pageTemplates = map[string]*template.Template{}
 
-// LoadTemplates - Load templates với layout inheritance
-// Mỗi page template được inline vào layout thành HTML hoàn chỉnh
+// LoadTemplates - Load tất cả templates, mỗi page có template set riêng
 func LoadTemplates(dir string) *template.Template {
-	root := template.New("root")
+	layoutFile := filepath.Join(dir, "admin", "layout", "base.html")
+	loginFile := filepath.Join(dir, "admin", "auth", "login.html")
 
-	layoutContent := loadLayoutFile(dir)
+	// Fail fast nếu file bắt buộc không tồn tại
+	for _, f := range []string{layoutFile, loginFile} {
+		if _, err := os.Stat(f); err != nil {
+			log.Fatalf("Required template file not found: %s", f)
+		}
+	}
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+	// Collect page files
+	var pageFiles []string
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || filepath.Ext(path) != ".html" {
 			return walkErr
 		}
-
-		name, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err
-		}
-
-		// Skip layout files
-		if strings.Contains(name, "layout/") {
+		if path == layoutFile || path == loginFile {
 			return nil
 		}
-
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		content := string(raw)
-		var finalHTML string
-
-		if strings.Contains(content, layoutDirective) && layoutContent != "" {
-			// Page dùng layout → inline content vào layout
-			pageBody := extractContentBlock(content)
-			finalHTML = strings.Replace(layoutContent, contentBlock, pageBody, 1)
-		} else {
-			// Standalone template (login.html)
-			finalHTML = content
-		}
-
-		if _, parseErr := root.New(name).Parse(finalHTML); parseErr != nil {
-			log.Fatalf("Template parse error [%s]: %v", name, parseErr)
-		}
-
-		log.Printf("✓ Template loaded: %s", name)
+		pageFiles = append(pageFiles, path)
 		return nil
 	})
 
-	if err != nil {
-		log.Fatalf("Template walk error: %v", err)
+	// Parse mỗi page cùng layout vào template set riêng
+	for _, pageFile := range pageFiles {
+		name, _ := filepath.Rel(dir, pageFile)
+
+		tmpl, err := template.New("base").ParseFiles(layoutFile, pageFile)
+		if err != nil {
+			log.Fatalf("Failed to parse template [%s]: %v", name, err)
+		}
+
+		// Kiểm tra "content" block tồn tại - fail fast
+		if tmpl.Lookup("content") == nil {
+			log.Fatalf("Template %q missing {{ define \"content\" }}...{{ end }} block", name)
+		}
+
+		// Lưu toàn bộ template set (bao gồm "base" + "content")
+		pageTemplates[name] = tmpl
+		log.Printf("✓ Template loaded: %s", name)
 	}
 
-	return root
+	// Parse login standalone
+	loginContent, err := os.ReadFile(loginFile)
+	if err != nil {
+		log.Fatalf("Failed to read login.html: %v", err)
+	}
+	loginTmpl := template.New("admin/auth/login.html")
+	if _, err := loginTmpl.Parse(string(loginContent)); err != nil {
+		log.Fatalf("Failed to parse login.html: %v", err)
+	}
+	pageTemplates["admin/auth/login.html"] = loginTmpl
+	log.Printf("✓ Template loaded: admin/auth/login.html")
+
+	// Trả về dummy root (Gin sẽ dùng GetTemplate thay thế)
+	return template.New("root")
 }
 
-// loadLayoutFile - Đọc base layout file
-func loadLayoutFile(dir string) string {
-	layoutFile := filepath.Join(dir, "admin", "layout", "base.html")
-	content, err := os.ReadFile(layoutFile)
-	if err != nil {
-		log.Printf("⚠ Layout file not found: %s", layoutFile)
-		return ""
+// GetTemplate - Lấy template set theo tên page
+func GetTemplate(name string) (*template.Template, error) {
+	tmpl, ok := pageTemplates[name]
+	if !ok {
+		return nil, fmt.Errorf("template %q not found", name)
 	}
-	log.Printf("✓ Layout loaded: admin/layout/base.html")
-	return string(content)
-}
-
-// extractContentBlock - Lấy nội dung giữa {{ define "content" }} và {{ end }}
-func extractContentBlock(content string) string {
-	start := strings.Index(content, contentDefine)
-	if start == -1 {
-		return ""
-	}
-
-	body := content[start+len(contentDefine):]
-
-	end := strings.LastIndex(body, contentEnd)
-	if end == -1 {
-		return body
-	}
-
-	return strings.TrimSpace(body[:end])
+	return tmpl, nil
 }

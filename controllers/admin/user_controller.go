@@ -14,5 +14,5 @@ func NewUserController() *UserController {
 }
 
 func (c *UserController) ShowUsers(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "admin/users.html", utils.GetAdminData(ctx, "Users", "users"))
+	utils.RenderHTML(ctx, http.StatusOK, "admin/users.html", utils.GetAdminData(ctx, "Users", "users"))
 }

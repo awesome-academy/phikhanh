@@ -8,7 +8,7 @@ const (
 	MsgInvalidCredentials = "Invalid email or password"
 	MsgInternalError      = "An error occurred, please try again later"
 	MsgInvalidUserID      = "Invalid user ID"
-	MsgInvalidFormat      = "Invalid format"
+	MsgInvalidUUIDFormat  = "Invalid UUID format"
 )
 
 // ServiceError - Struct chứa status code và message để trả về từ service

@@ -14,5 +14,5 @@ func NewServiceController() *ServiceController {
 }
 
 func (c *ServiceController) ShowServices(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "admin/services.html", utils.GetAdminData(ctx, "Services", "services"))
+	utils.RenderHTML(ctx, http.StatusOK, "admin/services.html", utils.GetAdminData(ctx, "Services", "services"))
 }
