@@ -2,6 +2,7 @@ package admin
 
 import (
 	"net/http"
+	"phikhanh/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,8 +13,12 @@ func NewDashboardController() *DashboardController {
 	return &DashboardController{}
 }
 
-// ShowDashboard - Hiển thị trang dashboard admin
-// GET /admin/dashboard
 func (c *DashboardController) ShowDashboard(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "dashboard.html", gin.H{})
+	data := utils.GetAdminData(ctx, "Dashboard", "dashboard")
+	data["ApplicationCount"] = 0
+	data["PendingCount"] = 0
+	data["ServiceCount"] = 0
+	data["UserCount"] = 0
+
+	utils.RenderHTML(ctx, http.StatusOK, "admin/dashboard.html", data)
 }
