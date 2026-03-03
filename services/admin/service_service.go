@@ -1,10 +1,12 @@
 package admin
 
 import (
+	adminDto "phikhanh/dto/admin"
 	"phikhanh/models"
 	adminRepo "phikhanh/repositories/admin"
 	"phikhanh/utils"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -42,6 +44,32 @@ func (s *ServiceAdminService) GetByID(id uuid.UUID) (*models.Service, error) {
 		return nil, utils.NewInternalServerError(err)
 	}
 	return service, nil
+}
+
+// GetDetail - Lấy chi tiết service với formatted timestamps
+func (s *ServiceAdminService) GetDetail(id uuid.UUID) (*adminDto.ServiceDetail, error) {
+	svc, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	detail := &adminDto.ServiceDetail{
+		ID:             svc.ID.String(),
+		Code:           svc.Code,
+		Name:           svc.Name,
+		Sector:         svc.Sector,
+		Description:    svc.Description,
+		ProcessingDays: svc.ProcessingDays,
+		Fee:            svc.Fee,
+		CreatedAt:      svc.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:      svc.UpdatedAt.Format(time.RFC3339),
+	}
+
+	if svc.Department != nil {
+		detail.DepartmentName = svc.Department.Name
+	}
+
+	return detail, nil
 }
 
 func (s *ServiceAdminService) Create(service *models.Service) error {

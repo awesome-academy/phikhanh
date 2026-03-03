@@ -2,17 +2,18 @@ package admin
 
 import (
 	"fmt"
+	adminDto "phikhanh/dto/admin"
 	"phikhanh/models"
 	adminRepo "phikhanh/repositories/admin"
 	"phikhanh/utils"
 	"regexp"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// deptCodePattern - Chỉ cho phép đúng 3 chữ số sau "DP-"
 var deptCodePattern = regexp.MustCompile(`^DP-\d{3}$`)
 
 type DepartmentService struct {
@@ -40,6 +41,24 @@ func (s *DepartmentService) GetByID(id uuid.UUID) (*models.Department, error) {
 		return nil, utils.NewInternalServerError(err)
 	}
 	return department, nil
+}
+
+// GetDetail - Lấy chi tiết department với formatted timestamps
+func (s *DepartmentService) GetDetail(id uuid.UUID) (*adminDto.DepartmentDetail, error) {
+	dept, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &adminDto.DepartmentDetail{
+		ID:         dept.ID.String(),
+		Code:       dept.Code,
+		Name:       dept.Name,
+		Address:    dept.Address,
+		LeaderName: dept.LeaderName,
+		CreatedAt:  dept.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  dept.UpdatedAt.Format(time.RFC3339),
+	}, nil
 }
 
 func (s *DepartmentService) Create(department *models.Department) error {
@@ -71,40 +90,28 @@ func (s *DepartmentService) BindForm(ctx *gin.Context) (*models.Department, erro
 	rawCode := ctx.PostForm("code")
 	name := ctx.PostForm("name")
 
-	if rawCode == "" || name == "" {
-		return &models.Department{
-			Code:       rawCode,
-			Name:       name,
-			Address:    ctx.PostForm("address"),
-			LeaderName: ctx.PostForm("leader_name"),
-		}, utils.NewBadRequestError("Code and Name are required")
-	}
-
-	// Auto prefix DP- nếu user chỉ nhập 3 số
-	code := normalizeCode(rawCode)
-
-	// Validate format DP-XXX
-	if !deptCodePattern.MatchString(code) {
-		return &models.Department{
-			Code:       rawCode,
-			Name:       name,
-			Address:    ctx.PostForm("address"),
-			LeaderName: ctx.PostForm("leader_name"),
-		}, utils.NewBadRequestError("Code must be in format DP-XXX (e.g. DP-001)")
-	}
-
-	department := &models.Department{
-		Code:       code,
+	dept := &models.Department{
+		Code:       rawCode,
 		Name:       name,
 		Address:    ctx.PostForm("address"),
 		LeaderName: ctx.PostForm("leader_name"),
 	}
 
-	return department, nil
+	if rawCode == "" || name == "" {
+		return dept, utils.NewBadRequestError("Code and Name are required")
+	}
+
+	code := normalizeDeptCode(rawCode)
+	if !deptCodePattern.MatchString(code) {
+		return dept, utils.NewBadRequestError("Code must be in format DP-XXX (e.g. DP-001)")
+	}
+
+	dept.Code = code
+	return dept, nil
 }
 
-// normalizeCode - Tự động thêm prefix DP-
-func normalizeCode(raw string) string {
+// normalizeDeptCode - Tự động thêm prefix DP- nếu chưa có
+func normalizeDeptCode(raw string) string {
 	if matched, _ := regexp.MatchString(`^\d{3}$`, raw); matched {
 		return fmt.Sprintf("DP-%s", raw)
 	}

@@ -1,8 +1,6 @@
 {{ template "base" . }}
 {{ define "content" }}
 <div class="max-w-3xl space-y-6">
-
-    <!-- Action Buttons -->
     <div class="flex gap-3">
         <a href="/admin/services/{{ .Service.ID }}/edit"
            class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-medium rounded-lg transition">
@@ -17,11 +15,10 @@
         </form>
         <a href="/admin/services"
            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition">
-            ← Back to List
+            ← Back
         </a>
     </div>
 
-    <!-- Service Info -->
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
             <h3 class="font-semibold text-gray-900">Service Information</h3>
@@ -44,7 +41,7 @@
             <div class="grid grid-cols-3 px-6 py-4">
                 <span class="text-sm font-medium text-gray-500">Department</span>
                 <span class="col-span-2 text-sm text-gray-900">
-                    {{ if .Service.Department }}{{ .Service.Department.Name }}{{ else }}-{{ end }}
+                    {{ if .Service.DepartmentName }}{{ .Service.DepartmentName }}{{ else }}-{{ end }}
                 </span>
             </div>
             <div class="grid grid-cols-3 px-6 py-4">
@@ -65,11 +62,11 @@
             </div>
             <div class="grid grid-cols-3 px-6 py-4">
                 <span class="text-sm font-medium text-gray-500">Created At</span>
-                <span class="col-span-2 text-sm text-gray-900">{{ .CreatedAt }}</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Service.CreatedAt }}</span>
             </div>
             <div class="grid grid-cols-3 px-6 py-4">
                 <span class="text-sm font-medium text-gray-500">Updated At</span>
-                <span class="col-span-2 text-sm text-gray-900">{{ .UpdatedAt }}</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Service.UpdatedAt }}</span>
             </div>
         </div>
     </div>

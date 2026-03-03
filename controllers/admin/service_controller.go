@@ -5,10 +5,8 @@ import (
 	"phikhanh/models"
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ServiceController struct {
@@ -19,7 +17,7 @@ func NewServiceController(service *adminSvc.ServiceAdminService) *ServiceControl
 	return &ServiceController{service: service}
 }
 
-// List - Danh sách services
+// GET /admin/services
 func (c *ServiceController) List(ctx *gin.Context) {
 	services, err := c.service.GetAll()
 	if err != nil {
@@ -34,46 +32,59 @@ func (c *ServiceController) List(ctx *gin.Context) {
 	utils.RenderHTML(ctx, http.StatusOK, "admin/services/list.html", data)
 }
 
-// Detail - Chi tiết service
+// GET /admin/services/:id
 func (c *ServiceController) Detail(ctx *gin.Context) {
-	service, ok := c.findService(ctx)
+	id, ok := parseServiceID(ctx)
 	if !ok {
+		return
+	}
+
+	detail, err := c.service.GetDetail(id)
+	if err != nil {
+		ctx.Redirect(http.StatusFound, redirectServices+"?error=Service+not+found")
 		return
 	}
 
 	data := utils.GetAdminData(ctx, "Service Detail", "services")
-	data["Service"] = service
-	data["CreatedAt"] = service.CreatedAt.Format(time.RFC3339)
-	data["UpdatedAt"] = service.UpdatedAt.Format(time.RFC3339)
+	data["Service"] = detail
 
 	utils.RenderHTML(ctx, http.StatusOK, "admin/services/detail.html", data)
 }
 
-// CreateForm - Hiển thị form tạo service
+// GET /admin/services/create
 func (c *ServiceController) CreateForm(ctx *gin.Context) {
-	utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html", c.formData(ctx, "Add New Service", &models.Service{}, "/admin/services/create", "Create Service", ""))
+	utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html",
+		c.formData(ctx, "Add New Service", &models.Service{}, "/admin/services/create", "Create Service", ""))
 }
 
-// CreateSave - Xử lý tạo service
+// POST /admin/services/create
 func (c *ServiceController) CreateSave(ctx *gin.Context) {
 	service, err := c.service.BindForm(ctx)
 	if err != nil {
-		utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html", c.formData(ctx, "Add New Service", service, "/admin/services/create", "Create Service", err.Error()))
+		utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html",
+			c.formData(ctx, "Add New Service", service, "/admin/services/create", "Create Service", err.Error()))
 		return
 	}
 
 	if err := c.service.Create(service); err != nil {
-		utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html", c.formData(ctx, "Add New Service", service, "/admin/services/create", "Create Service", err.Error()))
+		utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html",
+			c.formData(ctx, "Add New Service", service, "/admin/services/create", "Create Service", err.Error()))
 		return
 	}
 
-	ctx.Redirect(http.StatusFound, "/admin/services?success=Service+created+successfully")
+	ctx.Redirect(http.StatusFound, redirectServices+"?success=Service+created+successfully")
 }
 
-// EditForm - Hiển thị form edit service
+// GET /admin/services/:id/edit
 func (c *ServiceController) EditForm(ctx *gin.Context) {
-	service, ok := c.findService(ctx)
+	id, ok := parseServiceID(ctx)
 	if !ok {
+		return
+	}
+
+	service, err := c.service.GetByID(id)
+	if err != nil {
+		ctx.Redirect(http.StatusFound, redirectServices+"?error=Service+not+found")
 		return
 	}
 
@@ -81,9 +92,9 @@ func (c *ServiceController) EditForm(ctx *gin.Context) {
 		c.formData(ctx, "Edit Service", service, "/admin/services/"+service.ID.String()+"/edit", "Save Changes", ""))
 }
 
-// EditSave - Xử lý update service
+// POST /admin/services/:id/edit
 func (c *ServiceController) EditSave(ctx *gin.Context) {
-	existing, ok := c.findService(ctx)
+	id, ok := parseServiceID(ctx)
 	if !ok {
 		return
 	}
@@ -91,21 +102,21 @@ func (c *ServiceController) EditSave(ctx *gin.Context) {
 	updated, err := c.service.BindForm(ctx)
 	if err != nil {
 		utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html",
-			c.formData(ctx, "Edit Service", updated, "/admin/services/"+existing.ID.String()+"/edit", "Save Changes", err.Error()))
+			c.formData(ctx, "Edit Service", updated, "/admin/services/"+id.String()+"/edit", "Save Changes", err.Error()))
 		return
 	}
 
-	updated.ID = existing.ID
+	updated.ID = id
 	if err := c.service.Update(updated); err != nil {
 		utils.RenderHTML(ctx, http.StatusOK, "admin/services/form.html",
-			c.formData(ctx, "Edit Service", updated, "/admin/services/"+existing.ID.String()+"/edit", "Save Changes", err.Error()))
+			c.formData(ctx, "Edit Service", updated, "/admin/services/"+id.String()+"/edit", "Save Changes", err.Error()))
 		return
 	}
 
-	ctx.Redirect(http.StatusFound, "/admin/services?success=Service+updated+successfully")
+	ctx.Redirect(http.StatusFound, redirectServices+"?success=Service+updated+successfully")
 }
 
-// Delete - Xóa service
+// POST /admin/services/:id/delete
 func (c *ServiceController) Delete(ctx *gin.Context) {
 	id, ok := parseServiceID(ctx)
 	if !ok {
@@ -113,28 +124,11 @@ func (c *ServiceController) Delete(ctx *gin.Context) {
 	}
 
 	if err := c.service.Delete(id); err != nil {
-		ctx.Redirect(http.StatusFound, "/admin/services?error=Failed+to+delete+service")
+		ctx.Redirect(http.StatusFound, redirectServices+"?error=Failed+to+delete+service")
 		return
 	}
 
-	ctx.Redirect(http.StatusFound, "/admin/services?success=Service+deleted+successfully")
-}
-
-// --- Private helpers ---
-
-func (c *ServiceController) findService(ctx *gin.Context) (*models.Service, bool) {
-	id, ok := parseServiceID(ctx)
-	if !ok {
-		return nil, false
-	}
-
-	service, err := c.service.GetByID(id)
-	if err != nil {
-		ctx.Redirect(http.StatusFound, "/admin/services?error=Service+not+found")
-		return nil, false
-	}
-
-	return service, true
+	ctx.Redirect(http.StatusFound, redirectServices+"?success=Service+deleted+successfully")
 }
 
 func (c *ServiceController) formData(ctx *gin.Context, title string, service *models.Service, action, label, errMsg string) gin.H {
@@ -147,13 +141,4 @@ func (c *ServiceController) formData(ctx *gin.Context, title string, service *mo
 	data["SubmitLabel"] = label
 	data["Error"] = errMsg
 	return data
-}
-
-func parseServiceID(ctx *gin.Context) (uuid.UUID, bool) {
-	id, err := uuid.Parse(ctx.Param("id"))
-	if err != nil {
-		ctx.Redirect(http.StatusFound, "/admin/services?error=Invalid+service+ID")
-		return uuid.Nil, false
-	}
-	return id, true
 }
