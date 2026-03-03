@@ -2,7 +2,6 @@ package admin
 
 import (
 	"net/http"
-	"net/url"
 
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
@@ -49,11 +48,7 @@ func (c *AuthController) ProcessLogin(ctx *gin.Context) {
 
 	user, token, err := c.service.Login(email, password)
 	if err != nil {
-		if svcErr, ok := err.(*utils.ServiceError); ok {
-			redirectWithError(ctx, svcErr.Message)
-			return
-		}
-		redirectWithError(ctx, "An error occurred")
+		redirectWithError(ctx, formatErrorMessage(err))
 		return
 	}
 
@@ -76,5 +71,5 @@ func (c *AuthController) ProcessLogout(ctx *gin.Context) {
 
 // redirectWithError - Redirect về login với error message
 func redirectWithError(ctx *gin.Context, message string) {
-	ctx.Redirect(http.StatusFound, "/admin/login?error="+url.QueryEscape(message))
+	setFlashError(ctx, message, "/admin/login")
 }

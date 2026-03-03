@@ -52,7 +52,6 @@ func SetupAdminRoutes(router *gin.Engine) {
 				services.GET("", serviceController.List)
 				services.GET("/create", serviceController.CreateForm)
 				services.POST("/create", serviceController.CreateSave)
-				services.GET("/:id", serviceController.Detail)
 				services.GET("/:id/edit", serviceController.EditForm)
 				services.POST("/:id/edit", serviceController.EditSave)
 				services.POST("/:id/delete", serviceController.Delete)

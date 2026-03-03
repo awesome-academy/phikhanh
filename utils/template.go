@@ -77,7 +77,6 @@ func LoadTemplates(dir string) *template.Template {
 		log.Printf("✓ Template loaded: %s", name)
 	}
 
-	_ = fmt.Sprintf // avoid unused import
 	return template.New("root")
 }
 

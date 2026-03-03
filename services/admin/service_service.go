@@ -86,11 +86,15 @@ func (s *ServiceAdminService) BindForm(ctx *gin.Context) (*models.Service, error
 		}
 	}
 
-	if deptID := ctx.PostForm("department_id"); deptID != "" {
-		if id, err := uuid.Parse(deptID); err == nil {
-			service.DepartmentID = id
-		}
+	deptID := ctx.PostForm("department_id")
+	if deptID == "" {
+		return service, utils.NewBadRequestError("department_id is required")
 	}
+	id, err := uuid.Parse(deptID)
+	if err != nil {
+		return service, utils.NewBadRequestError("Invalid department_id")
+	}
+	service.DepartmentID = id
 
 	return service, nil
 }

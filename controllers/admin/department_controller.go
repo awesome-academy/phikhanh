@@ -41,7 +41,7 @@ func (c *DepartmentController) Detail(ctx *gin.Context) {
 
 	detail, err := c.service.GetDetail(id)
 	if err != nil {
-		ctx.Redirect(http.StatusFound, redirectDepartments+"?error=Department+not+found")
+		setFlashError(ctx, "Department not found", redirectDepartments)
 		return
 	}
 
@@ -53,26 +53,23 @@ func (c *DepartmentController) Detail(ctx *gin.Context) {
 
 // GET /admin/departments/create
 func (c *DepartmentController) CreateForm(ctx *gin.Context) {
-	utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html",
-		c.formData(ctx, "Add New Department", &models.Department{}, "/admin/departments/create", "Create Department", ""))
+	c.renderForm(ctx, "Add New Department", &models.Department{}, "/admin/departments/create", "Create Department", "")
 }
 
 // POST /admin/departments/create
 func (c *DepartmentController) CreateSave(ctx *gin.Context) {
 	department, err := c.service.BindForm(ctx)
 	if err != nil {
-		utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html",
-			c.formData(ctx, "Add New Department", department, "/admin/departments/create", "Create Department", err.Error()))
+		c.renderForm(ctx, "Add New Department", department, "/admin/departments/create", "Create Department", formatErrorMessage(err))
 		return
 	}
 
 	if err := c.service.Create(department); err != nil {
-		utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html",
-			c.formData(ctx, "Add New Department", department, "/admin/departments/create", "Create Department", err.Error()))
+		c.renderForm(ctx, "Add New Department", department, "/admin/departments/create", "Create Department", formatErrorMessage(err))
 		return
 	}
 
-	ctx.Redirect(http.StatusFound, redirectDepartments+"?success=Department+created+successfully")
+	setFlashSuccess(ctx, "Department created successfully", redirectDepartments)
 }
 
 // GET /admin/departments/:id/edit
@@ -84,12 +81,11 @@ func (c *DepartmentController) EditForm(ctx *gin.Context) {
 
 	department, err := c.service.GetByID(id)
 	if err != nil {
-		ctx.Redirect(http.StatusFound, redirectDepartments+"?error=Department+not+found")
+		setFlashError(ctx, "Department not found", redirectDepartments)
 		return
 	}
 
-	utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html",
-		c.formData(ctx, "Edit Department", department, "/admin/departments/"+department.ID.String()+"/edit", "Save Changes", ""))
+	c.renderForm(ctx, "Edit Department", department, "/admin/departments/"+department.ID.String()+"/edit", "Save Changes", "")
 }
 
 // POST /admin/departments/:id/edit
@@ -101,19 +97,17 @@ func (c *DepartmentController) EditSave(ctx *gin.Context) {
 
 	updated, err := c.service.BindForm(ctx)
 	if err != nil {
-		utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html",
-			c.formData(ctx, "Edit Department", updated, "/admin/departments/"+id.String()+"/edit", "Save Changes", err.Error()))
+		c.renderForm(ctx, "Edit Department", updated, "/admin/departments/"+id.String()+"/edit", "Save Changes", formatErrorMessage(err))
 		return
 	}
 
 	updated.ID = id
 	if err := c.service.Update(updated); err != nil {
-		utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html",
-			c.formData(ctx, "Edit Department", updated, "/admin/departments/"+id.String()+"/edit", "Save Changes", err.Error()))
+		c.renderForm(ctx, "Edit Department", updated, "/admin/departments/"+id.String()+"/edit", "Save Changes", formatErrorMessage(err))
 		return
 	}
 
-	ctx.Redirect(http.StatusFound, redirectDepartments+"?success=Department+updated+successfully")
+	setFlashSuccess(ctx, "Department updated successfully", redirectDepartments)
 }
 
 // POST /admin/departments/:id/delete
@@ -124,11 +118,16 @@ func (c *DepartmentController) Delete(ctx *gin.Context) {
 	}
 
 	if err := c.service.Delete(id); err != nil {
-		ctx.Redirect(http.StatusFound, redirectDepartments+"?error=Failed+to+delete+department")
+		setFlashError(ctx, "Failed to delete department", redirectDepartments)
 		return
 	}
 
-	ctx.Redirect(http.StatusFound, redirectDepartments+"?success=Department+deleted+successfully")
+	setFlashSuccess(ctx, "Department deleted successfully", redirectDepartments)
+}
+
+// Helper function để render form
+func (c *DepartmentController) renderForm(ctx *gin.Context, title string, department *models.Department, action, label, errMsg string) {
+	utils.RenderHTML(ctx, http.StatusOK, "admin/departments/form.html", c.formData(ctx, title, department, action, label, errMsg))
 }
 
 func (c *DepartmentController) formData(ctx *gin.Context, title string, department *models.Department, action, label, errMsg string) gin.H {
@@ -137,5 +136,7 @@ func (c *DepartmentController) formData(ctx *gin.Context, title string, departme
 	data["FormAction"] = action
 	data["SubmitLabel"] = label
 	data["Error"] = errMsg
+	data["Success"] = ctx.Query("success")
+	data["CsrfToken"] = getCsrfToken(ctx)
 	return data
 }

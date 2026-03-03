@@ -9,6 +9,8 @@
         {{ end }}
 
         <form action="{{ .FormAction }}" method="POST" class="space-y-4" id="deptForm">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
 
             <!-- Code -->
             <div>
