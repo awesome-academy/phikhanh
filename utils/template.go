@@ -7,11 +7,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-// pageTemplates - Lưu từng page template set riêng biệt
-// key: template name (e.g. "admin/dashboard.html")
-// value: template set chứa cả "base" và "content"
+// templateFuncs - Custom template functions
+var templateFuncs = template.FuncMap{
+	"codeNumber": func(code string) string {
+		if idx := strings.LastIndex(code, "-"); idx != -1 {
+			return code[idx+1:]
+		}
+		return code
+	},
+}
+
 var pageTemplates = map[string]*template.Template{}
 
 // LoadTemplates - Load tất cả templates, mỗi page có template set riêng
@@ -26,7 +34,19 @@ func LoadTemplates(dir string) *template.Template {
 		}
 	}
 
-	// Collect page files
+	// Parse login standalone với funcs
+	loginContent, err := os.ReadFile(loginFile)
+	if err != nil {
+		log.Fatalf("Failed to read login.html: %v", err)
+	}
+	loginTmpl, err := template.New("admin/auth/login.html").Funcs(templateFuncs).Parse(string(loginContent))
+	if err != nil {
+		log.Fatalf("Failed to parse login.html: %v", err)
+	}
+	pageTemplates["admin/auth/login.html"] = loginTmpl
+	log.Printf("✓ Template loaded: admin/auth/login.html")
+
+	// Collect tất cả page files (bỏ qua layout và login)
 	var pageFiles []string
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || filepath.Ext(path) != ".html" {
@@ -39,38 +59,24 @@ func LoadTemplates(dir string) *template.Template {
 		return nil
 	})
 
-	// Parse mỗi page cùng layout vào template set riêng
+	// Mỗi page parse riêng biệt cùng layout
 	for _, pageFile := range pageFiles {
 		name, _ := filepath.Rel(dir, pageFile)
 
-		tmpl, err := template.New("base").ParseFiles(layoutFile, pageFile)
+		// Thêm Funcs vào template set
+		tmpl, err := template.New("base").Funcs(templateFuncs).ParseFiles(layoutFile, pageFile)
 		if err != nil {
 			log.Fatalf("Failed to parse template [%s]: %v", name, err)
 		}
 
-		// Kiểm tra "content" block tồn tại - fail fast
 		if tmpl.Lookup("content") == nil {
 			log.Fatalf("Template %q missing {{ define \"content\" }}...{{ end }} block", name)
 		}
 
-		// Lưu toàn bộ template set (bao gồm "base" + "content")
 		pageTemplates[name] = tmpl
 		log.Printf("✓ Template loaded: %s", name)
 	}
 
-	// Parse login standalone
-	loginContent, err := os.ReadFile(loginFile)
-	if err != nil {
-		log.Fatalf("Failed to read login.html: %v", err)
-	}
-	loginTmpl := template.New("admin/auth/login.html")
-	if _, err := loginTmpl.Parse(string(loginContent)); err != nil {
-		log.Fatalf("Failed to parse login.html: %v", err)
-	}
-	pageTemplates["admin/auth/login.html"] = loginTmpl
-	log.Printf("✓ Template loaded: admin/auth/login.html")
-
-	// Trả về dummy root (Gin sẽ dùng GetTemplate thay thế)
 	return template.New("root")
 }
 

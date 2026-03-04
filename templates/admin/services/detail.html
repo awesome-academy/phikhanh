@@ -1,0 +1,75 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="max-w-3xl space-y-6">
+    <div class="flex gap-3">
+        <a href="/admin/services/{{ .Service.ID }}/edit"
+           class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-medium rounded-lg transition">
+            Edit Service
+        </a>
+        <form action="/admin/services/{{ .Service.ID }}/delete" method="POST"
+              onsubmit="return confirm('Delete this service?')">
+            <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+            <button type="submit"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition">
+                Delete
+            </button>
+        </form>
+        <a href="/admin/services"
+           class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition">
+            ← Back
+        </a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-semibold text-gray-900">Service Information</h3>
+        </div>
+        <div class="divide-y divide-gray-100">
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Code</span>
+                <span class="col-span-2 text-sm font-mono text-gray-900">{{ .Service.Code }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Name</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Service.Name }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Sector</span>
+                <span class="col-span-2 text-sm text-gray-900">
+                    {{ if .Service.Sector }}{{ .Service.Sector }}{{ else }}-{{ end }}
+                </span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Department</span>
+                <span class="col-span-2 text-sm text-gray-900">
+                    {{ if .Service.DepartmentName }}{{ .Service.DepartmentName }}{{ else }}-{{ end }}
+                </span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Description</span>
+                <span class="col-span-2 text-sm text-gray-900">
+                    {{ if .Service.Description }}{{ .Service.Description }}{{ else }}-{{ end }}
+                </span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Processing Days</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Service.ProcessingDays }} days</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Fee</span>
+                <span class="col-span-2 text-sm text-gray-900">
+                    {{ if .Service.Fee }}{{ .Service.Fee }} VND{{ else }}Free{{ end }}
+                </span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Created At</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Service.CreatedAt }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Updated At</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .Service.UpdatedAt }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
