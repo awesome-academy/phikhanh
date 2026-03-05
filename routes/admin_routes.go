@@ -26,12 +26,17 @@ func SetupAdminRoutes(router *gin.Engine) {
 	deptService := adminSvc.NewDepartmentService(deptRepo)
 	departmentController := admin.NewDepartmentController(deptService)
 
-	// Other controllers
+	// Applications
+	appRepo := adminRepo.NewApplicationRepository(config.GetDB())
+	appService := adminSvc.NewApplicationAdminService(appRepo)
+	applicationController := admin.NewApplicationController(appService)
+
+	// Other Controllers
 	dashboardController := admin.NewDashboardController()
 	userController := admin.NewUserController()
-	applicationController := admin.NewApplicationController()
 	activityLogController := admin.NewActivityLogController()
 
+	// Setup routes
 	adminGroup := router.Group("/admin")
 	{
 		adminGroup.GET("/login", authController.ShowLogin)
@@ -42,12 +47,19 @@ func SetupAdminRoutes(router *gin.Engine) {
 		protected.Use(middlewares.AdminAuthMiddleware())
 		{
 			protected.GET("/dashboard", dashboardController.ShowDashboard)
-			protected.GET("/users", userController.ShowUsers)
-			protected.GET("/applications", applicationController.ShowApplications)
-			protected.GET("/activity-logs", activityLogController.ShowActivityLogs)
 
-			// Services CRUD
+			// Applications - All roles (admin, manager, staff)
+			applications := protected.Group("/applications")
+			applications.Use(middlewares.RequireRole("admin", "manager", "staff"))
+			{
+				applications.GET("", applicationController.List)
+				applications.GET("/:id", applicationController.ShowDetail)
+				applications.POST("/:id/process", applicationController.Process)
+			}
+
+			// Services - Admin & Manager only
 			services := protected.Group("/services")
+			services.Use(middlewares.RequireRole("admin", "manager"))
 			{
 				services.GET("", serviceController.List)
 				services.GET("/create", serviceController.CreateForm)
@@ -57,8 +69,9 @@ func SetupAdminRoutes(router *gin.Engine) {
 				services.POST("/:id/delete", serviceController.Delete)
 			}
 
-			// Departments CRUD
+			// Departments - Admin only
 			departments := protected.Group("/departments")
+			departments.Use(middlewares.RequireRole("admin"))
 			{
 				departments.GET("", departmentController.List)
 				departments.GET("/create", departmentController.CreateForm)
@@ -67,6 +80,20 @@ func SetupAdminRoutes(router *gin.Engine) {
 				departments.GET("/:id/edit", departmentController.EditForm)
 				departments.POST("/:id/edit", departmentController.EditSave)
 				departments.POST("/:id/delete", departmentController.Delete)
+			}
+
+			// Users - Admin only
+			users := protected.Group("/users")
+			users.Use(middlewares.RequireRole("admin"))
+			{
+				users.GET("", userController.ShowUsers)
+			}
+
+			// Activity Logs - Admin only
+			activityLogs := protected.Group("/activity-logs")
+			activityLogs.Use(middlewares.RequireRole("admin"))
+			{
+				activityLogs.GET("", activityLogController.ShowActivityLogs)
 			}
 		}
 	}
