@@ -13,7 +13,6 @@ type DashboardController struct {
 	appService  *adminSvc.ApplicationAdminService
 	svcService  *adminSvc.ServiceAdminService
 	deptService *adminSvc.DepartmentService
-	userRepo    interface{} // User repository
 }
 
 func NewDashboardController(
@@ -36,11 +35,10 @@ func (c *DashboardController) ShowDashboard(ctx *gin.Context) {
 	var processingCount int64
 	if appList != nil {
 		applicationCount = appList.TotalItems
-		// Count processing status
-		for _, item := range appList.Items {
-			if item.Status == "Processing" {
-				processingCount++
-			}
+		// Count processing applications using a dedicated filtered query
+		processingList, _ := c.appService.GetList("Processing", nil, 1)
+		if processingList != nil {
+			processingCount = processingList.TotalItems
 		}
 	}
 

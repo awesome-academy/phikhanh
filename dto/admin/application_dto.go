@@ -38,19 +38,20 @@ type ApplicationHistory struct {
 
 // ApplicationDetail - DTO chi tiết application
 type ApplicationDetail struct {
-	ID             string
-	Code           string
-	ApplicantName  string
-	Email          string
-	CitizenID      string
-	Phone          string
-	ServiceName    string
-	ProcessingDays int
-	Fee            *int
-	Status         string
-	SubmittedAt    string
-	Histories      []ApplicationHistory
-	Attachments    []ApplicationAttachment
+	ID              string
+	Code            string
+	ApplicantName   string
+	Email           string
+	CitizenID       string
+	Phone           string
+	ServiceName     string
+	ProcessingDays  int
+	Fee             *int
+	Status          string
+	SubmittedAt     string
+	AssignedStaffID string // Add this field để check authorization
+	Histories       []ApplicationHistory
+	Attachments     []ApplicationAttachment
 }
 
 // StaffMember - DTO staff member cho dropdown assign

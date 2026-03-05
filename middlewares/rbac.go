@@ -2,23 +2,25 @@ package middlewares
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 )
 
 // RequireRole - Middleware kiểm tra role của user
+// Nếu user không có required role, redirect về dashboard với error message
 func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Lấy role từ context (được set bởi auth middleware)
 		role, exists := ctx.Get("admin_role")
 		if !exists {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			ctx.Redirect(http.StatusFound, "/admin/dashboard?error="+url.QueryEscape("Unauthorized access"))
 			return
 		}
 
 		roleStr, ok := role.(string)
 		if !ok {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid role format"})
+			ctx.Redirect(http.StatusFound, "/admin/dashboard?error="+url.QueryEscape("Invalid role format"))
 			return
 		}
 
@@ -32,7 +34,7 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 		}
 
 		if !allowed {
-			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			ctx.Redirect(http.StatusFound, "/admin/dashboard?error="+url.QueryEscape("Access denied. Insufficient permissions"))
 			return
 		}
 

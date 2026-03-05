@@ -78,7 +78,7 @@ func (s *ApplicationAdminService) GetList(status string, assignedToUserID *strin
 	}, nil
 }
 
-// GetDetail - Lấy chi tiết application với tất cả related data (user, service, attachments, histories)
+// GetDetail - Lấy chi tiết application với tất cả related data
 func (s *ApplicationAdminService) GetDetail(id string) (*adminDto.ApplicationDetail, error) {
 	app, err := s.repo.FindByIDWithDetailsAndDescription(id)
 	if err != nil {
@@ -93,6 +93,11 @@ func (s *ApplicationAdminService) GetDetail(id string) (*adminDto.ApplicationDet
 		Code:        app.Code,
 		Status:      string(app.Status),
 		SubmittedAt: app.CreatedAt.Format(time.DateTime),
+	}
+
+	// Map AssignedStaffID để check authorization
+	if app.AssignedStaffID != nil {
+		detail.AssignedStaffID = app.AssignedStaffID.String()
 	}
 
 	if app.User != nil {
@@ -117,7 +122,7 @@ func (s *ApplicationAdminService) GetDetail(id string) (*adminDto.ApplicationDet
 		})
 	}
 
-	// Map histories với description chi tiết
+	// Map histories
 	detail.Histories = make([]adminDto.ApplicationHistory, 0, len(app.Histories))
 	for _, hist := range app.Histories {
 		h := adminDto.ApplicationHistory{
@@ -190,26 +195,14 @@ func (s *ApplicationAdminService) GetNextStatuses(currentStatus string) []string
 	return []string{}
 }
 
-// ProcessApplication - Main workflow untuk xử lý application
-// 1. Validate status transition
+// ProcessApplication - Main workflow để xử lý application
+// 1. Validate status transition dựa trên state machine
 // 2. Get current app data
 // 3. Build history description
 // 4. Update status + assign staff (transaction)
 // 5. Trigger async email notification
 func (s *ApplicationAdminService) ProcessApplication(appID string, newStatus string, assignedStaffID *string, note string, actorID string) error {
-	// Validate status là valid enum
-	validStatuses := map[string]bool{
-		string(models.StatusProcessing):         true,
-		string(models.StatusApproved):           true,
-		string(models.StatusRejected):           true,
-		string(models.StatusSupplementRequired): true,
-	}
-
-	if !validStatuses[newStatus] {
-		return utils.NewBadRequestError("Invalid status: " + newStatus)
-	}
-
-	// Lấy current application để biết old status (cần cho history description)
+	// Lấy current application để biết old status
 	app, err := s.repo.FindByIDWithDetailsAndDescription(appID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -220,7 +213,15 @@ func (s *ApplicationAdminService) ProcessApplication(appID string, newStatus str
 
 	oldStatus := string(app.Status)
 
-	// Lấy tên staff nếu được assign (dùng cho history description)
+	// Validate status transition dựa trên state machine
+	allowedTransitions := s.GetNextStatuses(oldStatus)
+	if !s.isAllowedTransition(newStatus, allowedTransitions) {
+		return utils.NewBadRequestError(
+			"Invalid status transition: cannot change from " + oldStatus + " to " + newStatus,
+		)
+	}
+
+	// Lấy tên staff nếu được assign
 	var assignedStaffName *string
 	if assignedStaffID != nil && *assignedStaffID != "" {
 		name, err := s.repo.GetStaffNameByID(*assignedStaffID)
@@ -229,7 +230,7 @@ func (s *ApplicationAdminService) ProcessApplication(appID string, newStatus str
 		}
 	}
 
-	// Build description chi tiết cho history: "Received → Processing and assigned to Nguyen Van A. Note: ..."
+	// Build description chi tiết cho history
 	description := s.BuildHistoryDescription(oldStatus, newStatus, assignedStaffName, note)
 
 	// Update application trong DB + insert history record (transaction)
@@ -237,13 +238,22 @@ func (s *ApplicationAdminService) ProcessApplication(appID string, newStatus str
 		return utils.NewInternalServerError(err)
 	}
 
-	// Trigger async email notification nếu status là Approved hoặc Supplement_Required
-	// Goroutine sẽ chạy background, không block HTTP response
+	// Trigger async email notification
 	if newStatus == string(models.StatusApproved) || newStatus == string(models.StatusSupplementRequired) {
 		go s.sendStatusUpdateEmailAsync(app, newStatus, note)
 	}
 
 	return nil
+}
+
+// isAllowedTransition - Check nếu transition từ oldStatus tới newStatus có được phép không
+func (s *ApplicationAdminService) isAllowedTransition(newStatus string, allowedStatuses []string) bool {
+	for _, allowed := range allowedStatuses {
+		if allowed == newStatus {
+			return true
+		}
+	}
+	return false
 }
 
 // sendStatusUpdateEmailAsync - Gửi email thông báo status thay đổi (async goroutine)
@@ -278,7 +288,9 @@ func (s *ApplicationAdminService) sendStatusUpdateEmailAsync(app *models.Applica
 	)
 
 	if err != nil {
-		log.Printf("[Email Async] Failed to send email for application %s: %v", app.Code, err)
+		// Report error centrally
+		errorHandler := utils.GetEmailErrorHandler()
+		errorHandler.ReportError(app.Code, app.User.Email, err)
 		return
 	}
 

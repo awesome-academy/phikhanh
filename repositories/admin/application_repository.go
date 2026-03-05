@@ -16,14 +16,56 @@ func NewApplicationRepository(db *gorm.DB) *ApplicationRepository {
 	return &ApplicationRepository{db: db}
 }
 
+// PreloadOption - Functional option để customize preloading
+type PreloadOption func(*gorm.DB) *gorm.DB
+
+// WithUser - Preload User
+func WithUser() PreloadOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("User")
+	}
+}
+
+// WithService - Preload Service
+func WithService() PreloadOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Service")
+	}
+}
+
+// WithAttachments - Preload Attachments
+func WithAttachments() PreloadOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Attachments")
+	}
+}
+
+// WithHistories - Preload Histories với ordering
+func WithHistories() PreloadOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Histories", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at DESC")
+		}).Preload("Histories.Actor")
+	}
+}
+
+// WithAssignedStaff - Preload AssignedStaff
+func WithAssignedStaff() PreloadOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("AssignedStaff")
+	}
+}
+
 // FindAllWithFilter - Lấy danh sách applications với filter và pagination
 func (r *ApplicationRepository) FindAllWithFilter(status string, offset, limit int) ([]models.Application, int64, error) {
 	var applications []models.Application
 	var total int64
 
-	query := r.db.Model(&models.Application{}).
-		Preload("User").
-		Preload("Service")
+	query := r.db.Model(&models.Application{})
+
+	// Apply preload options
+	query = WithUser()(query)
+	query = WithService()(query)
 
 	if status != "" {
 		query = query.Where("status = ?", status)
@@ -40,41 +82,44 @@ func (r *ApplicationRepository) FindAllWithFilter(status string, offset, limit i
 	return applications, total, nil
 }
 
-// FindByIDWithDetails - Lấy chi tiết application với tất cả related data
-func (r *ApplicationRepository) FindByIDWithDetails(id string) (*models.Application, error) {
+// FindByID - Generic method để lấy application với custom preloads
+func (r *ApplicationRepository) FindByID(id string, opts ...PreloadOption) (*models.Application, error) {
 	var application models.Application
-	err := r.db.
-		Preload("User").
-		Preload("Service").
-		Preload("Attachments").
-		Preload("Histories", func(db *gorm.DB) *gorm.DB {
-			return db.Order("created_at DESC")
-		}).
-		Preload("Histories.Actor").
-		First(&application, "id = ?", id).Error
+
+	query := r.db
+
+	// Apply all preload options
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	err := query.First(&application, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
+
 	return &application, nil
 }
 
-// FindByIDWithDetailsAndDescription - Lấy chi tiết application với tất cả related data
+// FindByIDWithDetails - Lấy chi tiết application với user, service, attachments, histories
+func (r *ApplicationRepository) FindByIDWithDetails(id string) (*models.Application, error) {
+	return r.FindByID(id,
+		WithUser(),
+		WithService(),
+		WithAttachments(),
+		WithHistories(),
+	)
+}
+
+// FindByIDWithDetailsAndDescription - Lấy chi tiết application + assigned staff
 func (r *ApplicationRepository) FindByIDWithDetailsAndDescription(id string) (*models.Application, error) {
-	var application models.Application
-	err := r.db.
-		Preload("User").
-		Preload("Service").
-		Preload("Attachments").
-		Preload("Histories", func(db *gorm.DB) *gorm.DB {
-			return db.Order("created_at DESC")
-		}).
-		Preload("Histories.Actor").
-		Preload("AssignedStaff").
-		First(&application, "id = ?", id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &application, nil
+	return r.FindByID(id,
+		WithUser(),
+		WithService(),
+		WithAttachments(),
+		WithHistories(),
+		WithAssignedStaff(),
+	)
 }
 
 // GetStaffNameByID - Lấy tên staff theo ID
@@ -88,55 +133,6 @@ func (r *ApplicationRepository) GetStaffNameByID(staffID string) (string, error)
 		return "", err
 	}
 	return user.Name, nil
-}
-
-// ProcessAndAssignWithHistory - Cập nhật status, assign staff, và thêm history trong transaction
-func (r *ApplicationRepository) ProcessAndAssignWithHistory(appID string, newStatus string, assignedStaffID *string, note string, actorID string) error {
-	// Parse appID từ string sang UUID
-	appUUID, err := uuid.Parse(appID)
-	if err != nil {
-		return err
-	}
-
-	// Parse actorID từ string sang UUID
-	actorUUID, err := uuid.Parse(actorID)
-	if err != nil {
-		return err
-	}
-
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		// Update application status
-		updateData := map[string]interface{}{
-			"status": newStatus,
-		}
-
-		// Chỉ update assigned_staff_id nếu được cung cấp
-		if assignedStaffID != nil && *assignedStaffID != "" {
-			staffUUID, err := uuid.Parse(*assignedStaffID)
-			if err != nil {
-				return err
-			}
-			updateData["assigned_staff_id"] = staffUUID
-		}
-
-		if err := tx.Model(&models.Application{}).Where("id = ?", appUUID).Updates(updateData).Error; err != nil {
-			return err
-		}
-
-		// Insert history record - dùng UUID trực tiếp, không convert sang string
-		history := &models.ApplicationHistory{
-			ApplicationID: appUUID,
-			ActorID:       actorUUID,
-			Action:        newStatus,
-			Note:          note,
-		}
-
-		if err := tx.Create(history).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
 }
 
 // ProcessAndAssignWithHistoryV2 - Version 2 với description chi tiết

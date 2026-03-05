@@ -69,11 +69,26 @@ func (c *ApplicationController) ShowDetail(ctx *gin.Context) {
 		return
 	}
 
-	// Lấy danh sách staff có thể assign
-	availableStaff, _ := c.service.GetAvailableStaff()
-
 	userRole, _ := ctx.Get("admin_role")
 	roleStr, _ := userRole.(string)
+
+	// SECURITY: Staff chỉ có thể xem application được assign cho chính họ
+	if roleStr == "staff" {
+		adminID, svcErr := utils.ExtractAdminID(ctx)
+		if svcErr != nil {
+			setFlashError(ctx, "Unauthorized", "/admin/applications")
+			return
+		}
+
+		// Kiểm tra application có được assign cho staff hiện tại không
+		if detail.AssignedStaffID == "" || detail.AssignedStaffID != adminID.String() {
+			setFlashError(ctx, "Access denied. This application is not assigned to you", "/admin/applications")
+			return
+		}
+	}
+
+	// Lấy danh sách staff có thể assign
+	availableStaff, _ := c.service.GetAvailableStaff()
 
 	// Lấy danh sách status tiếp theo (state machine based)
 	nextStatuses := c.service.GetNextStatuses(detail.Status)
@@ -109,19 +124,31 @@ func (c *ApplicationController) Process(ctx *gin.Context) {
 	userRole, _ := ctx.Get("admin_role")
 	roleStr, _ := userRole.(string)
 
-	var assignedStaffID *string
-	if roleStr == "admin" || roleStr == "manager" {
-		if req.AssignedStaffID != "" {
-			assignedStaffID = &req.AssignedStaffID
+	// SECURITY: Staff chỉ có thể process application được assign cho chính họ
+	if roleStr == "staff" {
+		detail, err := c.service.GetDetail(appID)
+		if err != nil {
+			setFlashError(ctx, formatErrorMessage(err), "/admin/applications")
+			return
+		}
+
+		// Kiểm tra application có được assign cho staff hiện tại không
+		if detail.AssignedStaffID == "" || detail.AssignedStaffID != adminID.String() {
+			setFlashError(ctx, "Access denied. This application is not assigned to you", "/admin/applications")
+			return
 		}
 	}
 
+	var assignedStaffID *string
+	if roleStr == "admin" || roleStr == "manager" {
+		// For admins/managers, always pass a non-nil pointer so the service can
+		// distinguish between "no change" (nil) and explicit unassignment (empty string).
+		assignedStaffID = &req.AssignedStaffID
+	}
+
 	if err := c.service.ProcessApplication(appID, req.NewStatus, assignedStaffID, req.Notes, adminID.String()); err != nil {
-		if svcErr, ok := err.(*utils.ServiceError); ok {
-			ctx.Redirect(http.StatusFound, "/admin/applications/"+appID+"?error="+svcErr.Message)
-			return
-		}
-		ctx.Redirect(http.StatusFound, "/admin/applications/"+appID+"?error=Failed+to+process+application")
+		// ProcessApplication now validates transitions and returns clear error
+		setFlashError(ctx, formatErrorMessage(err), "/admin/applications/"+appID)
 		return
 	}
 
