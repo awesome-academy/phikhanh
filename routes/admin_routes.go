@@ -31,10 +31,12 @@ func SetupAdminRoutes(router *gin.Engine) {
 	appService := adminSvc.NewApplicationAdminService(appRepo)
 	applicationController := admin.NewApplicationController(appService)
 
+	// Dashboard
+	dashboardController := admin.NewDashboardController(appService, svcService, deptService)
+
 	// Other Controllers
-	dashboardController := admin.NewDashboardController()
-	userController := admin.NewUserController()
 	activityLogController := admin.NewActivityLogController()
+	userController := admin.NewUserController()
 
 	// Setup routes
 	adminGroup := router.Group("/admin")
