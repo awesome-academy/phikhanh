@@ -10,13 +10,33 @@ import (
 	"strings"
 )
 
-// templateFuncs - Custom template functions
+// statusBadgeClass - Map status -> CSS classes
+var statusBadgeClassMap = map[string]string{
+	"Received":            "bg-gray-100 text-gray-700",
+	"Processing":          "bg-yellow-100 text-yellow-700",
+	"Supplement_Required": "bg-orange-100 text-orange-700",
+	"Approved":            "bg-green-100 text-green-700",
+	"Rejected":            "bg-red-100 text-red-700",
+}
+
 var templateFuncs = template.FuncMap{
+	// codeNumber - Extract số từ code format PREFIX-XXX → XXX
 	"codeNumber": func(code string) string {
 		if idx := strings.LastIndex(code, "-"); idx != -1 {
 			return code[idx+1:]
 		}
 		return code
+	},
+	// add - Cộng hai số nguyên (dùng cho pagination)
+	"add": func(a, b int) int { return a + b },
+	// sub - Trừ hai số nguyên (dùng cho pagination)
+	"sub": func(a, b int) int { return a - b },
+	// statusBadge - Lấy CSS classes cho status badge
+	"statusBadge": func(status string) string {
+		if class, ok := statusBadgeClassMap[status]; ok {
+			return class
+		}
+		return "bg-gray-100 text-gray-700"
 	},
 }
 
@@ -46,15 +66,23 @@ func LoadTemplates(dir string) *template.Template {
 	pageTemplates["admin/auth/login.html"] = loginTmpl
 	log.Printf("✓ Template loaded: admin/auth/login.html")
 
-	// Collect tất cả page files (bỏ qua layout và login)
+	// Collect tất cả page files (bỏ qua layout, login, và email templates)
 	var pageFiles []string
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || filepath.Ext(path) != ".html" {
 			return walkErr
 		}
+
+		// Skip layout và login files
 		if path == layoutFile || path == loginFile {
 			return nil
 		}
+
+		// SKIP email templates (không cần {{ define "content" }} block)
+		if strings.Contains(path, "email/") {
+			return nil
+		}
+
 		pageFiles = append(pageFiles, path)
 		return nil
 	})

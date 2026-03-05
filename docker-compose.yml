@@ -1,0 +1,13 @@
+services:
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: phikhanh_mailhog
+    ports:
+      - "1025:1025"   # SMTP port
+      - "8025:8025"   # Web UI port
+    networks:
+      - phikhanh_network
+
+networks:
+  phikhanh_network:
+    driver: bridge

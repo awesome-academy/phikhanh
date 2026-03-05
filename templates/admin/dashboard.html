@@ -1,22 +1,72 @@
 {{ template "base" . }}
 {{ define "content" }}
 <div class="space-y-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Page Title -->
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="text-gray-600 mt-1">Welcome to Public Service Management System</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Applications Stats -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="text-4xl font-bold text-gray-900 mb-2">{{ .ApplicationCount }}</div>
-            <p class="text-gray-600 text-sm">Total Applications</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Applications</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ .ApplicationCount }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
         </div>
+
+        <!-- Processing Applications -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="text-4xl font-bold text-gray-900 mb-2">{{ .PendingCount }}</div>
-            <p class="text-gray-600 text-sm">Pending</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Processing</p>
+                    <p class="text-3xl font-bold text-yellow-600 mt-2">{{ .ProcessingCount }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
         </div>
+
+        <!-- Services Count -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="text-4xl font-bold text-gray-900 mb-2">{{ .ServiceCount }}</div>
-            <p class="text-gray-600 text-sm">Services</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Services</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">{{ .ServiceCount }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+            </div>
         </div>
+
+        <!-- Departments Count -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="text-4xl font-bold text-gray-900 mb-2">{{ .UserCount }}</div>
-            <p class="text-gray-600 text-sm">Users</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Departments</p>
+                    <p class="text-3xl font-bold text-purple-600 mt-2">{{ .DepartmentCount }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4 0h1m-1-4h1"></path>
+                    </svg>
+                </div>
+            </div>
         </div>
     </div>
 </div>

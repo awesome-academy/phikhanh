@@ -82,6 +82,15 @@ func main() {
 		}
 	}()
 
+	// Initialize email error handler
+	emailErrorHandler := utils.GetEmailErrorHandler()
+
+	// Graceful shutdown
+	defer func() {
+		log.Println("Shutting down email error handler...")
+		emailErrorHandler.Close()
+	}()
+
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
