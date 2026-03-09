@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 
+	adminDto "phikhanh/dto/admin"
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
 
@@ -38,15 +39,14 @@ func (c *AuthController) ShowLogin(ctx *gin.Context) {
 
 // ProcessLogin - Xử lý login admin
 func (c *AuthController) ProcessLogin(ctx *gin.Context) {
-	email := ctx.PostForm("email")
-	password := ctx.PostForm("password")
+	var req adminDto.LoginRequest
 
-	if email == "" || password == "" {
-		redirectWithError(ctx, "Email and password are required")
+	if err := ctx.ShouldBind(&req); err != nil {
+		redirectWithError(ctx, formatErrorMessage(err))
 		return
 	}
 
-	user, token, err := c.service.Login(email, password)
+	user, token, err := c.service.Login(req.Email, req.Password)
 	if err != nil {
 		redirectWithError(ctx, formatErrorMessage(err))
 		return
