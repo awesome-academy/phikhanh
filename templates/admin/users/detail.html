@@ -1,0 +1,84 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="max-w-3xl space-y-6">
+    <!-- Actions -->
+    <div class="flex gap-3">
+        <a href="/admin/users/{{ .User.ID }}/edit"
+           class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-medium rounded-lg transition">
+            Edit User
+        </a>
+        <form action="/admin/users/{{ .User.ID }}/delete" method="POST"
+              onsubmit="return confirm('Delete this user?')">
+            <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+            <button type="submit"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition">
+                Delete
+            </button>
+        </form>
+        <a href="/admin/users"
+           class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition">
+            ← Back
+        </a>
+    </div>
+
+    <!-- Error Message -->
+    {{ if .Error }}
+    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-red-700 text-sm font-medium">{{ .Error }}</p>
+    </div>
+    {{ end }}
+
+    <!-- User Info -->
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-semibold text-gray-900">User Information</h3>
+        </div>
+        <div class="divide-y divide-gray-100">
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Citizen ID</span>
+                <span class="col-span-2 text-sm font-mono text-gray-900">{{ .User.CitizenID }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Name</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .User.Name }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Email</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .User.Email }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Phone</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ if .User.Phone }}{{ .User.Phone }}{{ else }}-{{ end }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Address</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ if .User.Address }}{{ .User.Address }}{{ else }}-{{ end }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Date of Birth</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ if .User.DateOfBirth }}{{ .User.DateOfBirth }}{{ else }}-{{ end }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Gender</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ if .User.Gender }}{{ .User.Gender }}{{ else }}-{{ end }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Role</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .User.Role }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Department</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ if .User.DepartmentName }}{{ .User.DepartmentName }}{{ else }}-{{ end }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Created At</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .User.CreatedAt }}</span>
+            </div>
+            <div class="grid grid-cols-3 px-6 py-4">
+                <span class="text-sm font-medium text-gray-500">Updated At</span>
+                <span class="col-span-2 text-sm text-gray-900">{{ .User.UpdatedAt }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

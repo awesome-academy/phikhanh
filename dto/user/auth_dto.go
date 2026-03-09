@@ -12,10 +12,10 @@ type RegisterRequest struct {
 	Gender      string `json:"gender" binding:"required,oneof=male female other" example:"male"`
 }
 
-// Request đăng nhập
+// Request đăng nhập - hỗ trợ cả CitizenID và Email
 type LoginRequest struct {
-	CitizenID string `json:"citizen_id" binding:"required" example:"001234567890"`
-	Password  string `json:"password" binding:"required" example:"Aa@123456"`
+	Login    string `json:"login" binding:"required" example:"001234567890 or nguyenvana@example.com"`
+	Password string `json:"password" binding:"required" example:"Aa@123456"`
 }
 
 // Response sau khi đăng nhập thành công

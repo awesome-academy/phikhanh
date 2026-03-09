@@ -39,3 +39,15 @@ type User struct {
 	Department   *Department   `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
 	Applications []Application `gorm:"foreignKey:UserID" json:"-"`
 }
+
+// GetEmail - Implement interface cho EmailService
+func (u *User) GetEmail() string { return u.Email }
+
+// GetName - Implement interface cho EmailService
+func (u *User) GetName() string { return u.Name }
+
+// GetCitizenID - Implement interface cho EmailService
+func (u *User) GetCitizenID() string { return u.CitizenID }
+
+// GetRole - Implement interface cho EmailService
+func (u *User) GetRole() string { return string(u.Role) }

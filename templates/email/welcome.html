@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chào mừng đến với hệ thống</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: #1a56db;
+            color: white;
+            padding: 24px;
+            text-align: left;
+        }
+        .header h1 { margin: 0; font-size: 22px; }
+        .header p { color: #bfdbfe; margin: 8px 0 0; font-size: 14px; }
+        .content { padding: 24px; border: 1px solid #e5e7eb; border-top: none; }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            margin: 16px 0;
+            padding: 16px;
+        }
+        .info-table td { padding: 6px 0; vertical-align: top; }
+        .info-table .label { color: #6b7280; width: 40%; }
+        .info-table .value { font-weight: bold; }
+        .role-badge {
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: normal;
+        }
+        .password-cell {
+            font-family: monospace;
+            background: #fef9c3;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .footer {
+            color: #6b7280;
+            font-size: 13px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Chào mừng đến với hệ thống</h1>
+            <p>Public Service Management System</p>
+        </div>
+        <div class="content">
+            <p>Xin chào <strong>{{ .Name }}</strong>,</p>
+            <p>Tài khoản của bạn đã được tạo trên hệ thống. Dưới đây là thông tin đăng nhập:</p>
+
+            <table class="info-table">
+                <tr>
+                    <td class="label">Họ tên:</td>
+                    <td class="value">{{ .Name }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Citizen ID:</td>
+                    <td class="value" style="font-family: monospace;">{{ .CitizenID }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Email:</td>
+                    <td>{{ .Email }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Vai trò:</td>
+                    <td><span class="role-badge">{{ .Role }}</span></td>
+                </tr>
+                <tr>
+                    <td class="label">Mật khẩu:</td>
+                    <td><span class="password-cell">{{ .Password }}</span></td>
+                </tr>
+            </table>
+
+            <p class="footer">
+                Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với quản trị viên hệ thống.<br>
+                Email này được gửi tự động, vui lòng không trả lời.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -29,14 +29,14 @@ definitions:
     type: object
   user.LoginRequest:
     properties:
-      citizen_id:
-        example: "001234567890"
+      login:
+        example: 001234567890 or nguyenvana@example.com
         type: string
       password:
         example: Aa@123456
         type: string
     required:
-    - citizen_id
+    - login
     - password
     type: object
   user.LoginResponse:
@@ -449,9 +449,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Đăng nhập bằng CCCD và mật khẩu
+      description: Đăng nhập bằng Citizen ID hoặc Email và mật khẩu
       parameters:
-      - description: Thông tin đăng nhập
+      - description: 'Thông tin đăng nhập (login: citizen_id hoặc email)'
         in: body
         name: request
         required: true

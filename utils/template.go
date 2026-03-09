@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // statusBadgeClass - Map status -> CSS classes
@@ -20,6 +21,13 @@ var statusBadgeClassMap = map[string]string{
 }
 
 var templateFuncs = template.FuncMap{
+	// formatDate - Format time.Time thành YYYY-MM-DD
+	"formatDate": func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return t.Format("2006-01-02")
+	},
 	// codeNumber - Extract số từ code format PREFIX-XXX → XXX
 	"codeNumber": func(code string) string {
 		if idx := strings.LastIndex(code, "-"); idx != -1 {

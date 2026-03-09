@@ -1,6 +1,7 @@
 package user
 
 import (
+	"strings"
 	"time"
 
 	"phikhanh/models"
@@ -75,23 +76,36 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 	return user, nil
 }
 
-// Đăng nhập
-func (s *AuthService) Login(citizenID, password string) (*models.User, string, error) {
-	// Tìm user
-	user, err := s.repo.FindByCitizenID(citizenID)
+// Login - Đăng nhập bằng CitizenID hoặc Email
+func (s *AuthService) Login(login, password string) (*models.User, string, error) {
+	var user *models.User
+	var err error
+
+	login = strings.TrimSpace(login)
+
+	// Phân biệt login bằng email hay citizen_id
+	if strings.Contains(login, "@") {
+		user, err = s.repo.FindByEmail(login)
+	} else {
+		user, err = s.repo.FindByCitizenID(login)
+	}
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, "", utils.NewUnauthorizedError("Invalid citizen ID or password")
+			return nil, "", utils.NewUnauthorizedError("Invalid login or password")
 		}
 		return nil, "", utils.NewInternalServerError(err)
 	}
 
-	// Kiểm tra password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, "", utils.NewUnauthorizedError("Invalid citizen ID or password")
+	// Chỉ cho phép citizen login qua API
+	if user.Role != models.RoleCitizen {
+		return nil, "", utils.NewUnauthorizedError("This account is not allowed to login here")
 	}
 
-	// Tạo JWT token
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return nil, "", utils.NewUnauthorizedError("Invalid login or password")
+	}
+
 	token, err := utils.GenerateToken(user.ID.String(), string(user.Role))
 	if err != nil {
 		return nil, "", utils.NewInternalServerError(err)

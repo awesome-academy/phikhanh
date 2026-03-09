@@ -29,11 +29,10 @@ func (r *AuthRepository) FindByCitizenID(citizenID string) (*models.User, error)
 	return &user, nil
 }
 
-// Tìm user theo email
+// FindByEmail - Tìm user theo email
 func (r *AuthRepository) FindByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("email = ?", email).First(&user).Error
-	if err != nil {
+	if err := r.db.Where("email = ? AND deleted_at IS NULL", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
