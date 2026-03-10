@@ -1,10 +1,12 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	adminDto "phikhanh/dto/admin"
+	"phikhanh/models"
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
 
@@ -12,11 +14,12 @@ import (
 )
 
 type ApplicationController struct {
-	service *adminSvc.ApplicationAdminService
+	service        *adminSvc.ApplicationAdminService
+	activityLogSvc *adminSvc.ActivityLogService
 }
 
-func NewApplicationController(service *adminSvc.ApplicationAdminService) *ApplicationController {
-	return &ApplicationController{service: service}
+func NewApplicationController(service *adminSvc.ApplicationAdminService, activityLogSvc *adminSvc.ActivityLogService) *ApplicationController {
+	return &ApplicationController{service: service, activityLogSvc: activityLogSvc}
 }
 
 // GET /admin/applications - Danh sách applications
@@ -115,7 +118,6 @@ func (c *ApplicationController) Process(ctx *gin.Context) {
 	}
 
 	var req adminDto.ProcessApplicationRequest
-
 	if err := ctx.ShouldBind(&req); err != nil {
 		setFlashError(ctx, formatErrorMessage(err), "/admin/applications/"+appID)
 		return
@@ -124,15 +126,12 @@ func (c *ApplicationController) Process(ctx *gin.Context) {
 	userRole, _ := ctx.Get("admin_role")
 	roleStr, _ := userRole.(string)
 
-	// SECURITY: Staff chỉ có thể process application được assign cho chính họ
 	if roleStr == "staff" {
 		detail, err := c.service.GetDetail(appID)
 		if err != nil {
 			setFlashError(ctx, formatErrorMessage(err), "/admin/applications")
 			return
 		}
-
-		// Kiểm tra application có được assign cho staff hiện tại không
 		if detail.AssignedStaffID == "" || detail.AssignedStaffID != adminID.String() {
 			setFlashError(ctx, "Access denied. This application is not assigned to you", "/admin/applications")
 			return
@@ -147,9 +146,27 @@ func (c *ApplicationController) Process(ctx *gin.Context) {
 	}
 
 	if err := c.service.ProcessApplication(appID, req.NewStatus, assignedStaffID, req.Notes, adminID.String()); err != nil {
-		// ProcessApplication now validates transitions and returns clear error
 		setFlashError(ctx, formatErrorMessage(err), "/admin/applications/"+appID)
 		return
+	}
+
+	// Record UPDATE_STATUS activity
+	action := models.ActionUpdateStatus
+	desc := fmt.Sprintf("Changed application %s status to %s", appID, req.NewStatus)
+	if req.Notes != "" {
+		desc += ". Note: " + req.Notes
+	}
+	c.activityLogSvc.RecordActivity(adminID.String(), action, appID, desc, ctx.ClientIP())
+
+	// Record ASSIGN_STAFF if staff was assigned
+	if assignedStaffID != nil && *assignedStaffID != "" {
+		c.activityLogSvc.RecordActivity(
+			adminID.String(),
+			models.ActionAssignStaff,
+			appID,
+			fmt.Sprintf("Assigned staff %s to application %s", *assignedStaffID, appID),
+			ctx.ClientIP(),
+		)
 	}
 
 	setFlashSuccess(ctx, "Application processed successfully", "/admin/applications")

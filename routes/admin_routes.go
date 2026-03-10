@@ -11,38 +11,41 @@ import (
 )
 
 func SetupAdminRoutes(router *gin.Engine) {
+	db := config.GetDB()
+
+	// Activity Logs (shared across controllers)
+	activityLogRepo := adminRepo.NewActivityLogRepository(db)
+	activityLogService := adminSvc.NewActivityLogService(activityLogRepo)
+	activityLogCtrl := admin.NewActivityLogController(activityLogService)
+
 	// Auth
-	authRepo := adminRepo.NewAdminRepository(config.GetDB())
+	authRepo := adminRepo.NewAdminRepository(db)
 	authService := adminSvc.NewAuthService(authRepo)
-	authController := admin.NewAuthController(authService)
+	authController := admin.NewAuthController(authService, activityLogService)
 
 	// Services CRUD
-	svcRepo := adminRepo.NewServiceRepository(config.GetDB())
+	svcRepo := adminRepo.NewServiceRepository(db)
 	svcService := adminSvc.NewServiceAdminService(svcRepo)
-	serviceController := admin.NewServiceController(svcService)
+	serviceController := admin.NewServiceController(svcService, activityLogService)
 
 	// Departments CRUD
-	deptRepo := adminRepo.NewDepartmentRepository(config.GetDB())
+	deptRepo := adminRepo.NewDepartmentRepository(db)
 	deptService := adminSvc.NewDepartmentService(deptRepo)
-	departmentController := admin.NewDepartmentController(deptService)
+	departmentController := admin.NewDepartmentController(deptService, activityLogService)
 
 	// Applications
-	appRepo := adminRepo.NewApplicationRepository(config.GetDB())
+	appRepo := adminRepo.NewApplicationRepository(db)
 	appService := adminSvc.NewApplicationAdminService(appRepo)
-	applicationController := admin.NewApplicationController(appService)
+	applicationController := admin.NewApplicationController(appService, activityLogService)
 
 	// Users
-	userRepo := adminRepo.NewUserRepository(config.GetDB())
+	userRepo := adminRepo.NewUserRepository(db)
 	userService := adminSvc.NewUserService(userRepo)
-	userController := admin.NewUserController(userService)
-
-	// Activity Logs
-	activityLogController := admin.NewActivityLogController()
+	userController := admin.NewUserController(userService, activityLogService)
 
 	// Dashboard
 	dashboardController := admin.NewDashboardController(appService, svcService, deptService)
 
-	// Setup routes
 	adminGroup := router.Group("/admin")
 	{
 		adminGroup.GET("/login", authController.ShowLogin)
@@ -54,7 +57,6 @@ func SetupAdminRoutes(router *gin.Engine) {
 		{
 			protected.GET("/dashboard", dashboardController.ShowDashboard)
 
-			// Applications - All roles (admin, manager, staff)
 			applications := protected.Group("/applications")
 			applications.Use(middlewares.RequireRole("admin", "manager", "staff"))
 			{
@@ -63,7 +65,6 @@ func SetupAdminRoutes(router *gin.Engine) {
 				applications.POST("/:id/process", applicationController.Process)
 			}
 
-			// Services - Admin & Manager only
 			services := protected.Group("/services")
 			services.Use(middlewares.RequireRole("admin", "manager"))
 			{
@@ -75,7 +76,6 @@ func SetupAdminRoutes(router *gin.Engine) {
 				services.POST("/:id/delete", serviceController.Delete)
 			}
 
-			// Departments - Admin only
 			departments := protected.Group("/departments")
 			departments.Use(middlewares.RequireRole("admin"))
 			{
@@ -88,7 +88,6 @@ func SetupAdminRoutes(router *gin.Engine) {
 				departments.POST("/:id/delete", departmentController.Delete)
 			}
 
-			// Users - Admin only
 			users := protected.Group("/users")
 			users.Use(middlewares.RequireRole("admin"))
 			{
@@ -101,11 +100,11 @@ func SetupAdminRoutes(router *gin.Engine) {
 				users.POST("/:id/delete", userController.Delete)
 			}
 
-			// Activity Logs - Admin only
 			activityLogs := protected.Group("/activity-logs")
 			activityLogs.Use(middlewares.RequireRole("admin"))
 			{
-				activityLogs.GET("", activityLogController.ShowActivityLogs)
+				activityLogs.GET("", activityLogCtrl.List)
+				activityLogs.POST("/cleanup", activityLogCtrl.Cleanup)
 			}
 		}
 	}

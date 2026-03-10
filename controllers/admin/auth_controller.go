@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	adminDto "phikhanh/dto/admin"
+	"phikhanh/models"
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
 
@@ -16,11 +17,12 @@ const (
 )
 
 type AuthController struct {
-	service *adminSvc.AuthService
+	service        *adminSvc.AuthService
+	activityLogSvc *adminSvc.ActivityLogService
 }
 
-func NewAuthController(service *adminSvc.AuthService) *AuthController {
-	return &AuthController{service: service}
+func NewAuthController(service *adminSvc.AuthService, activityLogSvc *adminSvc.ActivityLogService) *AuthController {
+	return &AuthController{service: service, activityLogSvc: activityLogSvc}
 }
 
 // ShowLogin - Hiển thị trang login admin
@@ -52,17 +54,35 @@ func (c *AuthController) ProcessLogin(ctx *gin.Context) {
 		return
 	}
 
-	// Tất cả cookies đều HttpOnly=true vì chỉ dùng server-side cho SSR
 	ctx.SetCookie("admin_token", token, cookieMaxAge, cookiePath, "", false, true)
 	ctx.SetCookie("admin_name", user.Name, cookieMaxAge, cookiePath, "", false, true)
 	ctx.SetCookie("admin_role", string(user.Role), cookieMaxAge, cookiePath, "", false, true)
+
+	// Record LOGIN activity
+	c.activityLogSvc.RecordActivity(
+		user.ID.String(),
+		models.ActionLogin,
+		user.ID.String(),
+		"Admin logged in: "+user.Email,
+		ctx.ClientIP(),
+	)
 
 	ctx.Redirect(http.StatusFound, "/admin/dashboard")
 }
 
 // ProcessLogout - Xử lý logout admin
 func (c *AuthController) ProcessLogout(ctx *gin.Context) {
-	// Xóa tất cả cookies với cùng HttpOnly=true
+	// Record LOGOUT before clearing cookies
+	if adminID, err := utils.ExtractAdminID(ctx); err == nil {
+		c.activityLogSvc.RecordActivity(
+			adminID.String(),
+			models.ActionLogout,
+			adminID.String(),
+			"Admin logged out",
+			ctx.ClientIP(),
+		)
+	}
+
 	ctx.SetCookie("admin_token", "", -1, cookiePath, "", false, true)
 	ctx.SetCookie("admin_name", "", -1, cookiePath, "", false, true)
 	ctx.SetCookie("admin_role", "", -1, cookiePath, "", false, true)

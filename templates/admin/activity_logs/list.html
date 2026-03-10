@@ -1,0 +1,175 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="space-y-4">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Activity Logs</h1>
+            <p class="text-sm text-gray-500 mt-1">Read-only audit trail • Newest first</p>
+        </div>
+        <!-- Cleanup Button -->
+        <form action="/admin/activity-logs/cleanup" method="POST"
+              onsubmit="return confirm('Delete all logs older than 30 days? This cannot be undone.')">
+            <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+            <input type="hidden" name="days" value="30">
+            <button type="submit"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition">
+                🗑 Delete Old Logs (30+ days)
+            </button>
+        </form>
+    </div>
+
+    <!-- Flash Messages -->
+    {{ if .Success }}
+    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <p class="text-green-700 text-sm font-medium">{{ .Success }}</p>
+    </div>
+    {{ end }}
+    {{ if .Error }}
+    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-red-700 text-sm font-medium">{{ .Error }}</p>
+    </div>
+    {{ end }}
+
+    <!-- Filter -->
+    <form method="GET" action="/admin/activity-logs"
+          class="bg-white border border-gray-200 rounded-lg p-4 flex flex-wrap items-end gap-3">
+
+        <!-- Action filter -->
+        <div class="flex flex-col gap-1 min-w-48">
+            <label class="text-xs font-medium text-gray-600">Action</label>
+            <select name="action"
+                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Actions</option>
+                {{ $cur := "" }}
+                {{ if .Result }}{{ $cur = .Result.Action }}{{ end }}
+                {{ range .Actions }}
+                <option value="{{ . }}" {{ if eq . $cur }}selected{{ end }}>{{ . }}</option>
+                {{ end }}
+            </select>
+        </div>
+
+        <!-- Keyword search -->
+        <div class="flex flex-col gap-1 flex-1 min-w-60">
+            <label class="text-xs font-medium text-gray-600">Search</label>
+            <input type="text" name="keyword"
+                   value="{{ if .Result }}{{ .Result.Keyword }}{{ end }}"
+                   placeholder="Search description or target ID..."
+                   class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-2">
+            <button type="submit"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                Filter
+            </button>
+            {{ if .Result }}{{ if or .Result.Action .Result.Keyword }}
+            <a href="/admin/activity-logs"
+               class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition">
+                Clear
+            </a>
+            {{ end }}{{ end }}
+        </div>
+
+        <span class="text-sm text-gray-500 ml-auto self-center">
+            Total: {{ if .Result }}{{ .Result.TotalItems }}{{ else }}0{{ end }} logs
+        </span>
+    </form>
+
+    <!-- Table -->
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Date / Time</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Actor</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Action</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Target ID</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">IP Address</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {{ if .Result }}
+                    {{ if .Result.Items }}
+                        {{ range .Result.Items }}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-4 py-3 text-gray-500 whitespace-nowrap font-mono text-xs">{{ .CreatedAt }}</td>
+                            <td class="px-4 py-3 text-gray-900 font-medium">{{ .ActorName }}</td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium
+                                    {{ if eq .Action "LOGIN" }}bg-green-100 text-green-700
+                                    {{ else if eq .Action "LOGOUT" }}bg-gray-100 text-gray-600
+                                    {{ else if eq .Action "DELETE_USER" }}bg-red-100 text-red-700
+                                    {{ else if eq .Action "DELETE_SERVICE" }}bg-red-100 text-red-700
+                                    {{ else if eq .Action "DELETE_DEPT" }}bg-red-100 text-red-700
+                                    {{ else if eq .Action "DELETE_APP" }}bg-red-100 text-red-700
+                                    {{ else if eq .Action "CREATE_USER" }}bg-blue-100 text-blue-700
+                                    {{ else if eq .Action "CREATE_SERVICE" }}bg-blue-100 text-blue-700
+                                    {{ else if eq .Action "CREATE_DEPT" }}bg-blue-100 text-blue-700
+                                    {{ else if eq .Action "UPDATE_STATUS" }}bg-yellow-100 text-yellow-700
+                                    {{ else if eq .Action "ASSIGN_STAFF" }}bg-purple-100 text-purple-700
+                                    {{ else if eq .Action "SUBMIT_APP" }}bg-indigo-100 text-indigo-700
+                                    {{ else }}bg-gray-100 text-gray-700{{ end }}">
+                                    {{ .Action }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 font-mono text-xs max-w-32 truncate"
+                                title="{{ .TargetID }}">
+                                {{ if .TargetID }}{{ .TargetID }}{{ else }}-{{ end }}
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 font-mono text-xs whitespace-nowrap">
+                                {{ if .IPAddress }}{{ .IPAddress }}{{ else }}-{{ end }}
+                            </td>
+                            <td class="px-4 py-3 text-gray-700 max-w-xs truncate"
+                                title="{{ .Description }}">
+                                {{ if .Description }}{{ .Description }}{{ else }}-{{ end }}
+                            </td>
+                        </tr>
+                        {{ end }}
+                    {{ else }}
+                    <tr>
+                        <td colspan="6" class="px-4 py-12 text-center text-gray-400">
+                            <p class="text-lg">No activity logs found.</p>
+                            <p class="text-sm mt-1">Try adjusting your filters.</p>
+                        </td>
+                    </tr>
+                    {{ end }}
+                {{ else }}
+                <tr>
+                    <td colspan="6" class="px-4 py-12 text-center text-gray-400">
+                        Failed to load activity logs.
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {{ if .Result }}
+    <div class="flex items-center justify-between">
+        <p class="text-sm text-gray-600">
+            Page {{ .Result.CurrentPage }} of {{ .Result.TotalPages }}
+        </p>
+        <div class="flex gap-2">
+            {{ if .Result.HasPrev }}
+            <a href="?page={{ sub .Result.CurrentPage 1 }}&action={{ .Result.Action }}&keyword={{ .Result.Keyword }}"
+               class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
+                ← Previous
+            </a>
+            {{ end }}
+            {{ if .Result.HasNext }}
+            <a href="?page={{ add .Result.CurrentPage 1 }}&action={{ .Result.Action }}&keyword={{ .Result.Keyword }}"
+               class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
+                Next →
+            </a>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+</div>
+{{ end }}

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,11 +16,12 @@ import (
 )
 
 type UserController struct {
-	service *adminSvc.UserService
+	service        *adminSvc.UserService
+	activityLogSvc *adminSvc.ActivityLogService
 }
 
-func NewUserController(service *adminSvc.UserService) *UserController {
-	return &UserController{service: service}
+func NewUserController(service *adminSvc.UserService, activityLogSvc *adminSvc.ActivityLogService) *UserController {
+	return &UserController{service: service, activityLogSvc: activityLogSvc}
 }
 
 // GET /admin/users - Danh sách users
@@ -53,23 +55,16 @@ func (c *UserController) CreateForm(ctx *gin.Context) {
 // POST /admin/users/create - Tạo user mới
 func (c *UserController) CreateSave(ctx *gin.Context) {
 	var req adminDto.CreateUserRequest
-
 	if err := ctx.ShouldBind(&req); err != nil {
 		c.renderFormWithErrors(ctx, "Create User", reqToFormData(req), "/admin/users/create", "Create", true, utils.FormatValidationErrorsMap(err))
 		return
 	}
 
 	user := &models.User{
-		CitizenID:    req.CitizenID,
-		Name:         req.Name,
-		Email:        req.Email,
-		PasswordHash: req.Password,
-		Role:         models.UserRole(req.Role),
-		Phone:        req.Phone,
-		Address:      req.Address,
-		Gender:       models.Gender(req.Gender),
+		CitizenID: req.CitizenID, Name: req.Name, Email: req.Email,
+		PasswordHash: req.Password, Role: models.UserRole(req.Role),
+		Phone: req.Phone, Address: req.Address, Gender: models.Gender(req.Gender),
 	}
-
 	if req.DateOfBirth != "" {
 		dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 		if err != nil {
@@ -79,7 +74,6 @@ func (c *UserController) CreateSave(ctx *gin.Context) {
 		}
 		user.DateOfBirth = &dob
 	}
-
 	if req.DepartmentID != "" {
 		deptID, err := uuid.Parse(req.DepartmentID)
 		if err != nil {
@@ -94,6 +88,16 @@ func (c *UserController) CreateSave(ctx *gin.Context) {
 		c.renderFormWithErrors(ctx, "Create User", reqToFormData(req), "/admin/users/create", "Create", true, map[string]string{"general": formatErrorMessage(err)})
 		return
 	}
+
+	// Record activity
+	actorID, _ := utils.ExtractAdminID(ctx)
+	c.activityLogSvc.RecordActivity(
+		actorID.String(),
+		models.ActionCreateUser,
+		user.ID.String(),
+		fmt.Sprintf("Created user: %s (%s) with role %s", user.Name, user.CitizenID, user.Role),
+		ctx.ClientIP(),
+	)
 
 	setFlashSuccess(ctx, "User created successfully", "/admin/users")
 }
@@ -144,7 +148,6 @@ func (c *UserController) EditForm(ctx *gin.Context) {
 // POST /admin/users/:id/edit - Cập nhật user
 func (c *UserController) EditSave(ctx *gin.Context) {
 	id := ctx.Param("id")
-
 	var req adminDto.UpdateUserRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		c.renderFormWithErrors(ctx, "Edit User", updateReqToFormData(req), "/admin/users/"+id+"/edit", "Update", false, utils.FormatValidationErrorsMap(err))
@@ -162,15 +165,10 @@ func (c *UserController) EditSave(ctx *gin.Context) {
 
 	user := &models.User{
 		BaseModel: models.BaseModel{ID: userID},
-		CitizenID: req.CitizenID,
-		Name:      req.Name,
-		Email:     req.Email,
-		Phone:     req.Phone,
-		Address:   req.Address,
-		Gender:    models.Gender(req.Gender),
-		Role:      models.UserRole(req.Role),
+		CitizenID: req.CitizenID, Name: req.Name, Email: req.Email,
+		Phone: req.Phone, Address: req.Address,
+		Gender: models.Gender(req.Gender), Role: models.UserRole(req.Role),
 	}
-
 	if req.DateOfBirth != "" {
 		dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 		if err != nil {
@@ -180,7 +178,6 @@ func (c *UserController) EditSave(ctx *gin.Context) {
 		}
 		user.DateOfBirth = &dob
 	}
-
 	if req.DepartmentID != "" {
 		deptID, err := uuid.Parse(req.DepartmentID)
 		if err != nil {
@@ -195,11 +192,20 @@ func (c *UserController) EditSave(ctx *gin.Context) {
 		c.renderFormWithErrors(ctx, "Edit User", updateReqToFormData(req), "/admin/users/"+id+"/edit", "Update", false, map[string]string{"general": formatErrorMessage(err)})
 		return
 	}
-
 	if err := c.service.Update(user); err != nil {
 		c.renderFormWithErrors(ctx, "Edit User", updateReqToFormData(req), "/admin/users/"+id+"/edit", "Update", false, map[string]string{"general": formatErrorMessage(err)})
 		return
 	}
+
+	// Record activity
+	actorID, _ := utils.ExtractAdminID(ctx)
+	c.activityLogSvc.RecordActivity(
+		actorID.String(),
+		models.ActionUpdateUser,
+		id,
+		fmt.Sprintf("Updated user: %s (%s)", req.Name, req.CitizenID),
+		ctx.ClientIP(),
+	)
 
 	setFlashSuccess(ctx, "User updated successfully", "/admin/users")
 }
@@ -208,10 +214,21 @@ func (c *UserController) EditSave(ctx *gin.Context) {
 func (c *UserController) Delete(ctx *gin.Context) {
 	id := ctx.Param("id")
 
+	// Get user info before delete for logging
+	detail, _ := c.service.GetDetail(id)
+
 	if err := c.service.Delete(id); err != nil {
 		setFlashError(ctx, formatErrorMessage(err), "/admin/users/"+id)
 		return
 	}
+
+	// Record activity
+	actorID, _ := utils.ExtractAdminID(ctx)
+	desc := "Deleted user ID: " + id
+	if detail != nil {
+		desc = fmt.Sprintf("Deleted user: %s (%s)", detail.Name, detail.CitizenID)
+	}
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionDeleteUser, id, desc, ctx.ClientIP())
 
 	setFlashSuccess(ctx, "User deleted successfully", "/admin/users")
 }
