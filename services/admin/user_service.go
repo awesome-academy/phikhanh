@@ -179,9 +179,17 @@ func (s *UserService) sendWelcomeEmailAsync(user *models.User, rawPassword strin
 	}
 }
 
-// Update - Cập nhật user
+// Update - Thin persistence-only layer, chỉ lưu data xuống DB
+// Validation và business logic phải được thực hiện trước bởi ValidateAndPrepareForUpdate
 func (s *UserService) Update(user *models.User) error {
-	// Validate required fields
+	if err := s.repo.Update(user); err != nil {
+		return utils.NewInternalServerError(err)
+	}
+	return nil
+}
+
+// ValidateAndPrepareForUpdate - Validate đầy đủ + enforce role restrictions
+func (s *UserService) ValidateAndPrepareForUpdate(user *models.User, currentUserRole string) error {
 	if user.CitizenID == "" {
 		return utils.NewBadRequestError("Citizen ID is required")
 	}
@@ -192,7 +200,35 @@ func (s *UserService) Update(user *models.User) error {
 		return utils.NewBadRequestError("Email is required")
 	}
 
-	// Kiểm tra citizen_id đã tồn tại (exclude current user)
+	currentUser, err := s.repo.FindByID(user.ID.String())
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.NewNotFoundError("User not found")
+		}
+		return utils.NewInternalServerError(err)
+	}
+
+	// ROLE RESTRICTION: Only admin can change role
+	if currentUserRole != "admin" {
+		user.Role = currentUser.Role
+	}
+
+	// ROLE RESTRICTION: Only admin/manager can set department
+	if currentUserRole != "admin" && currentUserRole != "manager" {
+		user.DepartmentID = currentUser.DepartmentID
+	}
+
+	// For staff role, department is required
+	if user.Role == models.RoleStaff && user.DepartmentID == nil {
+		return utils.NewBadRequestError("Department is required for staff role")
+	}
+
+	// Prevent changing admin to other roles
+	if currentUser.Role == models.RoleAdmin && user.Role != models.RoleAdmin {
+		return utils.NewBadRequestError("Cannot change admin role to other roles")
+	}
+
+	// Uniqueness checks (single DB round-trip each)
 	exists, err := s.repo.IsCitizenIDExistsExcept(user.CitizenID, user.ID.String())
 	if err != nil {
 		return utils.NewInternalServerError(err)
@@ -201,32 +237,12 @@ func (s *UserService) Update(user *models.User) error {
 		return utils.NewBadRequestError("Citizen ID already exists")
 	}
 
-	// Kiểm tra email đã tồn tại (exclude current user)
 	exists, err = s.repo.IsEmailExistsExcept(user.Email, user.ID.String())
 	if err != nil {
 		return utils.NewInternalServerError(err)
 	}
 	if exists {
 		return utils.NewBadRequestError("Email already exists")
-	}
-
-	// For staff role, department is required
-	if user.Role == models.RoleStaff && user.DepartmentID == nil {
-		return utils.NewBadRequestError("Department is required for staff")
-	}
-
-	// Prevent changing admin to other roles
-	currentUser, err := s.repo.FindByID(user.ID.String())
-	if err != nil {
-		return utils.NewInternalServerError(err)
-	}
-
-	if currentUser.Role == models.RoleAdmin && user.Role != models.RoleAdmin {
-		return utils.NewBadRequestError("Cannot change admin role to other roles")
-	}
-
-	if err := s.repo.Update(user); err != nil {
-		return utils.NewInternalServerError(err)
 	}
 
 	return nil
@@ -289,71 +305,6 @@ func (s *UserService) GetDepartments() ([]adminDto.DepartmentOption, error) {
 	}
 
 	return result, nil
-}
-
-// ValidateAndPrepareForUpdate - Validate và prepare user data cho update
-// Enforce role-based restrictions
-func (s *UserService) ValidateAndPrepareForUpdate(user *models.User, currentUserRole string) error {
-	// Validate required fields
-	if user.CitizenID == "" {
-		return utils.NewBadRequestError("Citizen ID is required")
-	}
-	if user.Name == "" {
-		return utils.NewBadRequestError("Name is required")
-	}
-	if user.Email == "" {
-		return utils.NewBadRequestError("Email is required")
-	}
-
-	// Get current user to check existing data
-	currentUser, err := s.repo.FindByID(user.ID.String())
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return utils.NewNotFoundError("User not found")
-		}
-		return utils.NewInternalServerError(err)
-	}
-
-	// ROLE RESTRICTION: Only admin can change role
-	if currentUserRole != "admin" {
-		// Non-admin cannot change role
-		user.Role = currentUser.Role
-	}
-
-	// ROLE RESTRICTION: Only admin/manager can set department
-	if currentUserRole != "admin" && currentUserRole != "manager" {
-		user.DepartmentID = currentUser.DepartmentID
-	}
-
-	// VALIDATION: For staff role, department is required
-	if user.Role == models.RoleStaff && user.DepartmentID == nil {
-		return utils.NewBadRequestError("Department is required for staff role")
-	}
-
-	// Kiểm tra citizen_id đã tồn tại (exclude current user)
-	exists, err := s.repo.IsCitizenIDExistsExcept(user.CitizenID, user.ID.String())
-	if err != nil {
-		return utils.NewInternalServerError(err)
-	}
-	if exists {
-		return utils.NewBadRequestError("Citizen ID already exists")
-	}
-
-	// Kiểm tra email đã tồn tại (exclude current user)
-	exists, err = s.repo.IsEmailExistsExcept(user.Email, user.ID.String())
-	if err != nil {
-		return utils.NewInternalServerError(err)
-	}
-	if exists {
-		return utils.NewBadRequestError("Email already exists")
-	}
-
-	// Prevent changing admin to other roles
-	if currentUser.Role == models.RoleAdmin && user.Role != models.RoleAdmin {
-		return utils.NewBadRequestError("Cannot change admin role to other roles")
-	}
-
-	return nil
 }
 
 // CanEditRole - Check if current user can edit role field

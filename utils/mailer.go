@@ -37,7 +37,6 @@ type WelcomeEmailData struct {
 	Email     string
 	Password  string
 	Role      string
-	LoginURL  string
 }
 
 // NewEmailService - Tạo instance EmailService từ env variables
@@ -120,10 +119,9 @@ func (es *EmailService) formatFromHeader() string {
 
 // SendApplicationStatusEmail - Gửi email thông báo status thay đổi
 func (es *EmailService) SendApplicationStatusEmail(toEmail, applicantName, applicationCode, status, note string) error {
-	// Kiểm tra SMTP được configure hay không
 	if !es.IsConfigured() {
 		log.Printf("[Email Service] Skipping email (SMTP not configured): to=%s, app=%s", toEmail, applicationCode)
-		return NewBadRequestError("Email service not configured")
+		return NewInternalServerError(nil)
 	}
 
 	// Validate recipient email address
@@ -245,7 +243,7 @@ func (es *EmailService) SendWelcomeEmail(user interface {
 func (es *EmailService) sendWelcomeEmailTo(toEmail, name, citizenID, role, rawPassword string) error {
 	if !es.IsConfigured() {
 		log.Printf("[Email Service] Skipping welcome email (SMTP not configured): to=%s", toEmail)
-		return NewBadRequestError("Email service not configured")
+		return NewInternalServerError(nil)
 	}
 
 	if toEmail == "" {

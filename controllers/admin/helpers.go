@@ -25,10 +25,9 @@ func formatErrorMessage(err error) string {
 		return ""
 	}
 
-	// Handle AppError từ service layer (cả admin và user services)
 	var appErr *utils.AppError
 	if errors.As(err, &appErr) {
-		if appErr.Code >= 400 && appErr.Code < 500 {
+		if appErr.StatusCode >= 400 && appErr.StatusCode < 500 {
 			return appErr.Message
 		}
 		return "An error occurred while processing your request"

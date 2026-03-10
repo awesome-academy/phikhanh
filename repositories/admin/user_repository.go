@@ -52,14 +52,27 @@ func (r *UserRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
-// Update - Cập nhật user
+// Update - Cập nhật user dùng map để tránh GORM bỏ qua zero values
 func (r *UserRepository) Update(user *models.User) error {
-	return r.db.Model(user).Updates(user).Error
+	updates := map[string]interface{}{
+		"citizen_id":      user.CitizenID,
+		"name":            user.Name,
+		"email":           user.Email,
+		"phone":           user.Phone,
+		"address":         user.Address,
+		"date_of_birth":   user.DateOfBirth,
+		"gender":          user.Gender,
+		"role":            user.Role,
+		"department_id":   user.DepartmentID,
+		"is_email_notify": user.IsEmailNotify,
+	}
+
+	return r.db.Model(user).Updates(updates).Error
 }
 
 // SoftDelete - Soft delete user (set deleted_at)
 func (r *UserRepository) SoftDelete(id string) error {
-	return r.db.Model(&models.User{}).Where("id = ?", id).Delete(&models.User{}).Error
+	return r.db.Where("id = ?", id).Delete(&models.User{}).Error
 }
 
 // GetUsersByRole - Lấy users theo role (không include soft deleted)
