@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"regexp"
 	"strings"
 	"time"
 
@@ -92,19 +93,17 @@ func (s *DepartmentService) Create(department *models.Department) error {
 		return utils.NewBadRequestError("Department code already exists")
 	}
 
-	// Denormalize leader name
+	// Validate và denormalize leader
 	if department.LeaderID != nil {
-		managers, _ := s.repo.GetAvailableManagers()
-		for _, m := range managers {
-			if m.ID == *department.LeaderID {
-				department.LeaderName = m.Name
-				break
-			}
+		leaderName, err := s.validateAndGetLeaderName(*department.LeaderID)
+		if err != nil {
+			return err
 		}
+		department.LeaderName = leaderName
 	}
 
 	if err := s.repo.CreateWithLeader(department); err != nil {
-		return utils.NewInternalServerError(err)
+		return utils.ParseDBError(err)
 	}
 	return nil
 }
@@ -118,22 +117,38 @@ func (s *DepartmentService) Update(department *models.Department) error {
 		return utils.NewInternalServerError(err)
 	}
 
-	// Denormalize leader name
+	// Validate và denormalize leader
 	department.LeaderName = ""
 	if department.LeaderID != nil {
-		managers, _ := s.repo.GetAvailableManagers()
-		for _, m := range managers {
-			if m.ID == *department.LeaderID {
-				department.LeaderName = m.Name
-				break
-			}
+		leaderName, err := s.validateAndGetLeaderName(*department.LeaderID)
+		if err != nil {
+			return err
 		}
+		department.LeaderName = leaderName
 	}
 
 	if err := s.repo.UpdateWithLeader(department, current.LeaderID); err != nil {
-		return utils.NewInternalServerError(err)
+		return utils.ParseDBError(err)
 	}
 	return nil
+}
+
+// validateAndGetLeaderName - Validate leader_id phải là manager thực sự tồn tại
+// Trả về tên leader nếu hợp lệ, error nếu không phải manager hoặc không tồn tại
+func (s *DepartmentService) validateAndGetLeaderName(leaderID uuid.UUID) (string, error) {
+	managers, err := s.repo.GetAvailableManagers()
+	if err != nil {
+		return "", utils.NewInternalServerError(err)
+	}
+
+	for _, m := range managers {
+		if m.ID == leaderID {
+			return m.Name, nil
+		}
+	}
+
+	// leaderID không tồn tại trong danh sách managers → tampering hoặc invalid
+	return "", utils.NewBadRequestError("Selected leader is not a valid manager")
 }
 
 func (s *DepartmentService) Delete(id uuid.UUID) error {
@@ -141,12 +156,12 @@ func (s *DepartmentService) Delete(id uuid.UUID) error {
 		return err
 	}
 	if err := s.repo.Delete(id); err != nil {
-		return utils.NewInternalServerError(err)
+		return utils.ParseDBError(err)
 	}
 	return nil
 }
 
-// BindForm - Parse form data bao gồm leader_id
+// BindForm - Parse và validate form data bao gồm leader_id
 func (s *DepartmentService) BindForm(ctx *gin.Context) (*models.Department, error) {
 	code := strings.TrimSpace(ctx.PostForm("code"))
 	name := strings.TrimSpace(ctx.PostForm("name"))
@@ -160,13 +175,17 @@ func (s *DepartmentService) BindForm(ctx *gin.Context) (*models.Department, erro
 		return &models.Department{}, utils.NewBadRequestError("Name is required")
 	}
 
-	// Auto-prefix DP-
-	if !strings.HasPrefix(code, "DP-") {
-		code = "DP-" + code
+	code = strings.ToUpper(code)
+	rawDigits := strings.TrimPrefix(code, "DP-")
+
+	if !regexp.MustCompile(`^\d{3}$`).MatchString(rawDigits) {
+		return &models.Department{}, utils.NewBadRequestError("Code must be exactly 3 digits (e.g. 001). Final format: DP-001")
 	}
 
+	finalCode := "DP-" + rawDigits
+
 	dept := &models.Department{
-		Code:    code,
+		Code:    finalCode,
 		Name:    name,
 		Address: address,
 	}

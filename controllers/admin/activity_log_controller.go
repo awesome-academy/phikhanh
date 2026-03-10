@@ -22,10 +22,12 @@ func NewActivityLogController(service *adminSvc.ActivityLogService) *ActivityLog
 // GET /admin/activity-logs
 func (c *ActivityLogController) List(ctx *gin.Context) {
 	action := ctx.Query("action")
-	keyword := ctx.Query("keyword")
-	page, _ := strconv.Atoi(ctx.Query("page"))
+	page, error := strconv.Atoi(ctx.Query("page"))
+	if error != nil || page <= 0 {
+		page = 1
+	}
 
-	result, err := c.service.GetList(action, keyword, page)
+	result, err := c.service.GetList(action, page)
 	if err != nil {
 		result = nil
 	}
@@ -35,6 +37,7 @@ func (c *ActivityLogController) List(ctx *gin.Context) {
 	data["Actions"] = c.service.GetAvailableActions()
 	data["Success"] = ctx.Query("success")
 	data["Error"] = ctx.Query("error")
+	data["CsrfToken"] = getCsrfToken(ctx)
 
 	utils.RenderHTML(ctx, http.StatusOK, "admin/activity_logs/list.html", data)
 }

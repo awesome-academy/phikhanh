@@ -50,15 +50,6 @@
             </select>
         </div>
 
-        <!-- Keyword search -->
-        <div class="flex flex-col gap-1 flex-1 min-w-60">
-            <label class="text-xs font-medium text-gray-600">Search</label>
-            <input type="text" name="keyword"
-                   value="{{ if .Result }}{{ .Result.Keyword }}{{ end }}"
-                   placeholder="Search description or target ID..."
-                   class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
         <!-- Buttons -->
         <div class="flex gap-2">
             <button type="submit"

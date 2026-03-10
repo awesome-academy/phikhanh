@@ -20,7 +20,7 @@ func (r *ActivityLogRepository) Create(log *models.SystemLog) error {
 	return r.db.Create(log).Error
 }
 
-func (r *ActivityLogRepository) FindAllWithFilter(action, keyword string, offset, limit int) ([]models.SystemLog, int64, error) {
+func (r *ActivityLogRepository) FindAllWithFilter(action string, offset, limit int) ([]models.SystemLog, int64, error) {
 	var logs []models.SystemLog
 	var total int64
 
@@ -28,10 +28,6 @@ func (r *ActivityLogRepository) FindAllWithFilter(action, keyword string, offset
 
 	if action != "" {
 		query = query.Where("action = ?", action)
-	}
-	if keyword != "" {
-		like := "%" + keyword + "%"
-		query = query.Where("description ILIKE ? OR target_id ILIKE ?", like, like)
 	}
 
 	if err := query.Count(&total).Error; err != nil {

@@ -51,13 +51,13 @@ func (s *ActivityLogService) RecordActivity(actorID, action, targetID, descripti
 	}()
 }
 
-func (s *ActivityLogService) GetList(action, keyword string, page int) (*adminDto.ActivityLogListResult, error) {
+func (s *ActivityLogService) GetList(action string, page int) (*adminDto.ActivityLogListResult, error) {
 	if page <= 0 {
 		page = 1
 	}
 	offset := (page - 1) * ActivityLogPageSize
 
-	logs, total, err := s.repo.FindAllWithFilter(action, keyword, offset, ActivityLogPageSize)
+	logs, total, err := s.repo.FindAllWithFilter(action, offset, ActivityLogPageSize)
 	if err != nil {
 		return nil, utils.NewInternalServerError(err)
 	}
@@ -90,7 +90,6 @@ func (s *ActivityLogService) GetList(action, keyword string, page int) (*adminDt
 		TotalPages:  totalPages,
 		TotalItems:  total,
 		Action:      action,
-		Keyword:     keyword,
 		HasPrev:     page > 1,
 		HasNext:     page < totalPages,
 	}, nil
