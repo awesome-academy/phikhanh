@@ -65,11 +65,11 @@ func (c *AuthController) Register(ctx *gin.Context) {
 
 // Login godoc
 // @Summary      Đăng nhập
-// @Description  Đăng nhập bằng CCCD và mật khẩu
+// @Description  Đăng nhập bằng Citizen ID hoặc Email và mật khẩu
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
-// @Param        request body userDto.LoginRequest true "Thông tin đăng nhập"
+// @Param        request body userDto.LoginRequest true "Thông tin đăng nhập (login: citizen_id hoặc email)"
 // @Success      200  {object}  utils.APIResponse{data=userDto.LoginResponse}
 // @Failure      400  {object}  utils.ValidationErrors
 // @Failure      401  {object}  utils.APIResponse
@@ -81,13 +81,12 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	user, token, err := c.service.Login(req.CitizenID, req.Password)
+	user, token, err := c.service.Login(req.Login, req.Password)
 	if err != nil {
 		if svcErr, ok := err.(*utils.ServiceError); ok {
 			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 			return
 		}
-		// Fallback for unexpected errors
 		svcErr := utils.NewInternalServerError(err)
 		utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
 		return

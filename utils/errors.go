@@ -1,6 +1,6 @@
 package utils
 
-import "fmt"
+import "net/http"
 
 // Common error messages
 const (
@@ -11,49 +11,42 @@ const (
 	MsgInvalidUUIDFormat  = "Invalid UUID format"
 )
 
-// ServiceError - Struct chứa status code và message để trả về từ service
-type ServiceError struct {
+// AppError - Unified error type cho cả admin và user
+type AppError struct {
 	StatusCode int
 	Message    string
-	Err        error // Lưu error gốc để log
 }
 
-func (e *ServiceError) Error() string {
-	if e.Err != nil {
-		return fmt.Sprintf("%s: %v", e.Message, e.Err)
-	}
+func (e *AppError) Error() string {
 	return e.Message
 }
 
-// NewServiceError - Tạo ServiceError với status code và message tùy chỉnh
-func NewServiceError(statusCode int, message string) *ServiceError {
-	return &ServiceError{
-		StatusCode: statusCode,
-		Message:    message,
+// ServiceError - Alias của AppError để tương thích với user controllers
+type ServiceError = AppError
+
+func NewBadRequestError(message string) *AppError {
+	return &AppError{StatusCode: http.StatusBadRequest, Message: message}
+}
+
+func NewNotFoundError(message string) *AppError {
+	return &AppError{StatusCode: http.StatusNotFound, Message: message}
+}
+
+func NewUnauthorizedError(message string) *AppError {
+	return &AppError{StatusCode: http.StatusUnauthorized, Message: message}
+}
+
+func NewForbiddenError(message string) *AppError {
+	return &AppError{StatusCode: http.StatusForbidden, Message: message}
+}
+
+func NewInternalServerError(err error) *AppError {
+	return &AppError{
+		StatusCode: http.StatusInternalServerError,
+		Message:    "An internal error occurred. Please try again later.",
 	}
 }
 
-// Common error constructors
-func NewBadRequestError(message string) *ServiceError {
-	return NewServiceError(400, message)
-}
-
-func NewUnauthorizedError(message string) *ServiceError {
-	return NewServiceError(401, message)
-}
-
-func NewNotFoundError(message string) *ServiceError {
-	return NewServiceError(404, message)
-}
-
-func NewInternalServerError(err error) *ServiceError {
-	return &ServiceError{
-		StatusCode: 500,
-		Message:    MsgInternalError,
-		Err:        err,
-	}
-}
-
-func NewTooManyRequestsError(message string) *ServiceError {
-	return NewServiceError(429, message)
+func NewTooManyRequestsError(message string) *AppError {
+	return &AppError{StatusCode: http.StatusTooManyRequests, Message: message}
 }

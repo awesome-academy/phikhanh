@@ -120,41 +120,93 @@ func ValidateStruct(s interface{}) error {
 	return validate.Struct(s)
 }
 
-// FormatValidationErrorsMap - Trả về map[field]error_message với JSON field names
+// FormatValidationErrorsMap - Trả về map[field]error_message với form field names
 func FormatValidationErrorsMap(err error) map[string]string {
 	errorMap := make(map[string]string)
 
-	if validationErrors, ok := err.(validator.ValidationErrors); ok {
-		for _, e := range validationErrors {
-			// Lấy JSON tag name thay vì lowercase field name
-			fieldName := getJSONFieldName(e)
-
-			switch e.Tag() {
-			case "required":
-				errorMap[fieldName] = "This field is required"
-			case "email":
-				errorMap[fieldName] = "Invalid email format"
-			case "citizen_id":
-				errorMap[fieldName] = "Must be exactly 12 digits"
-			case "vn_phone":
-				errorMap[fieldName] = "Invalid Vietnam phone number format"
-			case "strong_password":
-				errorMap[fieldName] = "Must be at least 8 characters with uppercase and special character"
-			case "past_date":
-				errorMap[fieldName] = "Must be a date in the past"
-			case "oneof":
-				errorMap[fieldName] = "Must be one of: " + e.Param()
-			case "min":
-				errorMap[fieldName] = "Must be at least " + e.Param() + " characters"
-			default:
-				errorMap[fieldName] = "Validation failed on " + e.Tag()
-			}
-		}
-	} else {
+	validationErrors, ok := err.(validator.ValidationErrors)
+	if !ok {
 		errorMap["general"] = err.Error()
+		return errorMap
+	}
+
+	// Map struct field name -> form field name (matching HTML input name attributes)
+	fieldNameMap := map[string]string{
+		"CitizenID":    "citizen_id",
+		"Name":         "name",
+		"Email":        "email",
+		"Password":     "password",
+		"Role":         "role",
+		"Phone":        "phone",
+		"DateOfBirth":  "date_of_birth",
+		"Gender":       "gender",
+		"DepartmentID": "department_id",
+		"Address":      "address",
+		"NewStatus":    "new_status",
+		"Notes":        "notes",
+		"Code":         "code",
+	}
+
+	// Human-readable label cho error messages
+	fieldLabelMap := map[string]string{
+		"CitizenID":    "Citizen ID",
+		"Name":         "Name",
+		"Email":        "Email",
+		"Password":     "Password",
+		"Role":         "Role",
+		"Phone":        "Phone",
+		"DateOfBirth":  "Date of Birth",
+		"Gender":       "Gender",
+		"DepartmentID": "Department",
+		"Address":      "Address",
+		"NewStatus":    "Status",
+		"Notes":        "Notes",
+		"Code":         "Code",
+	}
+
+	for _, e := range validationErrors {
+		structField := e.Field()
+
+		formField := toSnakeCase(structField)
+		if mapped, ok := fieldNameMap[structField]; ok {
+			formField = mapped
+		}
+
+		label := structField
+		if mapped, ok := fieldLabelMap[structField]; ok {
+			label = mapped
+		}
+
+		errorMap[formField] = formatFieldError(label, e)
 	}
 
 	return errorMap
+}
+
+// formatFieldError - Format error message cho một field
+func formatFieldError(label string, e validator.FieldError) string {
+	switch e.Tag() {
+	case "required":
+		return label + " is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return label + " must be at least " + e.Param() + " characters"
+	case "max":
+		return label + " must not exceed " + e.Param() + " characters"
+	case "oneof":
+		return label + " must be one of: " + strings.ReplaceAll(e.Param(), " ", ", ")
+	case "citizen_id":
+		return "Must be exactly 12 digits"
+	case "strong_password":
+		return "Must be at least 8 characters with uppercase letter and special character"
+	case "vn_phone":
+		return "Invalid Vietnamese phone number (e.g. 0901234567)"
+	case "past_date":
+		return "Must be a past date (YYYY-MM-DD)"
+	default:
+		return label + " is invalid"
+	}
 }
 
 // getJSONFieldName - Lấy JSON tag name từ struct field

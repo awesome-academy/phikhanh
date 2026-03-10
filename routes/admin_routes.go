@@ -31,12 +31,16 @@ func SetupAdminRoutes(router *gin.Engine) {
 	appService := adminSvc.NewApplicationAdminService(appRepo)
 	applicationController := admin.NewApplicationController(appService)
 
+	// Users
+	userRepo := adminRepo.NewUserRepository(config.GetDB())
+	userService := adminSvc.NewUserService(userRepo)
+	userController := admin.NewUserController(userService)
+
+	// Activity Logs
+	activityLogController := admin.NewActivityLogController()
+
 	// Dashboard
 	dashboardController := admin.NewDashboardController(appService, svcService, deptService)
-
-	// Other Controllers
-	activityLogController := admin.NewActivityLogController()
-	userController := admin.NewUserController()
 
 	// Setup routes
 	adminGroup := router.Group("/admin")
@@ -88,7 +92,13 @@ func SetupAdminRoutes(router *gin.Engine) {
 			users := protected.Group("/users")
 			users.Use(middlewares.RequireRole("admin"))
 			{
-				users.GET("", userController.ShowUsers)
+				users.GET("", userController.List)
+				users.GET("/create", userController.CreateForm)
+				users.POST("/create", userController.CreateSave)
+				users.GET("/:id", userController.ShowDetail)
+				users.GET("/:id/edit", userController.EditForm)
+				users.POST("/:id/edit", userController.EditSave)
+				users.POST("/:id/delete", userController.Delete)
 			}
 
 			// Activity Logs - Admin only

@@ -30,6 +30,15 @@ type EmailData struct {
 	Note            string
 }
 
+// WelcomeEmailData - Data để render welcome email template
+type WelcomeEmailData struct {
+	Name      string
+	CitizenID string
+	Email     string
+	Password  string
+	Role      string
+}
+
 // NewEmailService - Tạo instance EmailService từ env variables
 // Validate required config, log warning nếu config không đủ
 func NewEmailService() *EmailService {
@@ -110,10 +119,9 @@ func (es *EmailService) formatFromHeader() string {
 
 // SendApplicationStatusEmail - Gửi email thông báo status thay đổi
 func (es *EmailService) SendApplicationStatusEmail(toEmail, applicantName, applicationCode, status, note string) error {
-	// Kiểm tra SMTP được configure hay không
 	if !es.IsConfigured() {
 		log.Printf("[Email Service] Skipping email (SMTP not configured): to=%s, app=%s", toEmail, applicationCode)
-		return NewBadRequestError("Email service not configured")
+		return NewInternalServerError(nil)
 	}
 
 	// Validate recipient email address
@@ -219,4 +227,76 @@ func parseIntEnv(key string, defaultVal int) int {
 		return defaultVal
 	}
 	return result
+}
+
+// SendWelcomeEmail - Gửi welcome email cho user mới được tạo
+func (es *EmailService) SendWelcomeEmail(user interface {
+	GetEmail() string
+	GetName() string
+	GetCitizenID() string
+	GetRole() string
+}, rawPassword string) error {
+	return es.sendWelcomeEmailTo(user.GetEmail(), user.GetName(), user.GetCitizenID(), user.GetRole(), rawPassword)
+}
+
+// sendWelcomeEmailTo - Internal helper để gửi welcome email
+func (es *EmailService) sendWelcomeEmailTo(toEmail, name, citizenID, role, rawPassword string) error {
+	if !es.IsConfigured() {
+		log.Printf("[Email Service] Skipping welcome email (SMTP not configured): to=%s", toEmail)
+		return NewInternalServerError(nil)
+	}
+
+	if toEmail == "" {
+		return NewBadRequestError("Recipient email address is empty")
+	}
+
+	if !strings.Contains(toEmail, "@") {
+		return NewBadRequestError(fmt.Sprintf("Invalid email address: %s", toEmail))
+	}
+
+	data := WelcomeEmailData{
+		Name:      name,
+		CitizenID: citizenID,
+		Email:     toEmail,
+		Password:  rawPassword,
+		Role:      role,
+	}
+
+	// Parse email template từ file (giống status_update)
+	tmpl, err := template.ParseFiles("templates/email/welcome.html")
+	if err != nil {
+		log.Printf("[Email Service] Failed to parse welcome template: %v", err)
+		return NewInternalServerError(err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		log.Printf("[Email Service] Failed to execute welcome template: %v", err)
+		return NewInternalServerError(err)
+	}
+
+	subject := "[Thông báo] Tài khoản của bạn đã được tạo"
+	fromHeader := es.formatFromHeader()
+	message := "From: " + fromHeader + "\r\n" +
+		"To: " + toEmail + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
+		"\r\n" +
+		buf.String()
+
+	addr := es.Host + ":" + strconv.Itoa(es.Port)
+
+	var auth smtp.Auth
+	if es.Username != "" && es.Password != "" {
+		auth = smtp.PlainAuth("", es.Username, es.Password, es.Host)
+	}
+
+	if err := smtp.SendMail(addr, auth, es.FromAddr, []string{toEmail}, []byte(message)); err != nil {
+		log.Printf("[Email Service] Failed to send welcome email to %s: %v", toEmail, err)
+		return NewInternalServerError(err)
+	}
+
+	log.Printf("[Email Service] ✓ Welcome email sent to %s", toEmail)
+	return nil
 }
