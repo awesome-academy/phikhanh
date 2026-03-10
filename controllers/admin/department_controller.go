@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
+
 	"phikhanh/models"
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
@@ -10,11 +12,12 @@ import (
 )
 
 type DepartmentController struct {
-	service *adminSvc.DepartmentService
+	service        *adminSvc.DepartmentService
+	activityLogSvc *adminSvc.ActivityLogService
 }
 
-func NewDepartmentController(service *adminSvc.DepartmentService) *DepartmentController {
-	return &DepartmentController{service: service}
+func NewDepartmentController(service *adminSvc.DepartmentService, activityLogSvc *adminSvc.ActivityLogService) *DepartmentController {
+	return &DepartmentController{service: service, activityLogSvc: activityLogSvc}
 }
 
 // GET /admin/departments
@@ -63,11 +66,14 @@ func (c *DepartmentController) CreateSave(ctx *gin.Context) {
 		c.renderForm(ctx, "Add New Department", department, "/admin/departments/create", "Create Department", formatErrorMessage(err))
 		return
 	}
-
 	if err := c.service.Create(department); err != nil {
 		c.renderForm(ctx, "Add New Department", department, "/admin/departments/create", "Create Department", formatErrorMessage(err))
 		return
 	}
+
+	actorID, _ := utils.ExtractAdminID(ctx)
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionCreateDept, department.ID.String(),
+		fmt.Sprintf("Created department: %s (%s)", department.Name, department.Code), ctx.ClientIP())
 
 	setFlashSuccess(ctx, "Department created successfully", redirectDepartments)
 }
@@ -94,18 +100,20 @@ func (c *DepartmentController) EditSave(ctx *gin.Context) {
 	if !ok {
 		return
 	}
-
 	updated, err := c.service.BindForm(ctx)
 	if err != nil {
 		c.renderForm(ctx, "Edit Department", updated, "/admin/departments/"+id.String()+"/edit", "Save Changes", formatErrorMessage(err))
 		return
 	}
-
 	updated.ID = id
 	if err := c.service.Update(updated); err != nil {
 		c.renderForm(ctx, "Edit Department", updated, "/admin/departments/"+id.String()+"/edit", "Save Changes", formatErrorMessage(err))
 		return
 	}
+
+	actorID, _ := utils.ExtractAdminID(ctx)
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionUpdateDept, id.String(),
+		fmt.Sprintf("Updated department: %s (%s)", updated.Name, updated.Code), ctx.ClientIP())
 
 	setFlashSuccess(ctx, "Department updated successfully", redirectDepartments)
 }
@@ -117,10 +125,19 @@ func (c *DepartmentController) Delete(ctx *gin.Context) {
 		return
 	}
 
+	dept, _ := c.service.GetByID(id)
+
 	if err := c.service.Delete(id); err != nil {
 		setFlashError(ctx, "Failed to delete department", redirectDepartments)
 		return
 	}
+
+	actorID, _ := utils.ExtractAdminID(ctx)
+	desc := "Deleted department ID: " + id.String()
+	if dept != nil {
+		desc = fmt.Sprintf("Deleted department: %s (%s)", dept.Name, dept.Code)
+	}
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionDeleteDept, id.String(), desc, ctx.ClientIP())
 
 	setFlashSuccess(ctx, "Department deleted successfully", redirectDepartments)
 }
@@ -131,8 +148,10 @@ func (c *DepartmentController) renderForm(ctx *gin.Context, title string, depart
 }
 
 func (c *DepartmentController) formData(ctx *gin.Context, title string, department *models.Department, action, label, errMsg string) gin.H {
+	managers, _ := c.service.GetAvailableManagers()
 	data := utils.GetAdminData(ctx, title, "departments")
 	data["Department"] = department
+	data["Managers"] = managers
 	data["FormAction"] = action
 	data["SubmitLabel"] = label
 	data["Error"] = errMsg

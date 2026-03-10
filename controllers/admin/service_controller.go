@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
+
 	"phikhanh/models"
 	adminSvc "phikhanh/services/admin"
 	"phikhanh/utils"
@@ -10,11 +12,12 @@ import (
 )
 
 type ServiceController struct {
-	service *adminSvc.ServiceAdminService
+	service        *adminSvc.ServiceAdminService
+	activityLogSvc *adminSvc.ActivityLogService
 }
 
-func NewServiceController(service *adminSvc.ServiceAdminService) *ServiceController {
-	return &ServiceController{service: service}
+func NewServiceController(service *adminSvc.ServiceAdminService, activityLogSvc *adminSvc.ActivityLogService) *ServiceController {
+	return &ServiceController{service: service, activityLogSvc: activityLogSvc}
 }
 
 // GET /admin/services
@@ -44,11 +47,19 @@ func (c *ServiceController) CreateSave(ctx *gin.Context) {
 		c.renderForm(ctx, "Add New Service", service, "/admin/services/create", "Create Service", formatErrorMessage(err))
 		return
 	}
-
 	if err := c.service.Create(service); err != nil {
 		c.renderForm(ctx, "Add New Service", service, "/admin/services/create", "Create Service", formatErrorMessage(err))
 		return
 	}
+
+	actorID, _ := utils.ExtractAdminID(ctx)
+	c.activityLogSvc.RecordActivity(
+		actorID.String(),
+		models.ActionCreateService,
+		service.ID.String(),
+		fmt.Sprintf("Created service: %s (%s)", service.Name, service.Code),
+		ctx.ClientIP(),
+	)
 
 	setFlashSuccess(ctx, "Service created successfully", redirectServices)
 }
@@ -75,18 +86,25 @@ func (c *ServiceController) EditSave(ctx *gin.Context) {
 	if !ok {
 		return
 	}
-
 	updated, err := c.service.BindForm(ctx)
 	if err != nil {
 		c.renderForm(ctx, "Edit Service", updated, "/admin/services/"+id.String()+"/edit", "Save Changes", formatErrorMessage(err))
 		return
 	}
-
 	updated.ID = id
 	if err := c.service.Update(updated); err != nil {
 		c.renderForm(ctx, "Edit Service", updated, "/admin/services/"+id.String()+"/edit", "Save Changes", formatErrorMessage(err))
 		return
 	}
+
+	actorID, _ := utils.ExtractAdminID(ctx)
+	c.activityLogSvc.RecordActivity(
+		actorID.String(),
+		models.ActionUpdateService,
+		id.String(),
+		fmt.Sprintf("Updated service: %s (%s)", updated.Name, updated.Code),
+		ctx.ClientIP(),
+	)
 
 	setFlashSuccess(ctx, "Service updated successfully", redirectServices)
 }
@@ -98,10 +116,19 @@ func (c *ServiceController) Delete(ctx *gin.Context) {
 		return
 	}
 
+	svc, _ := c.service.GetByID(id)
+
 	if err := c.service.Delete(id); err != nil {
 		setFlashError(ctx, "Failed to delete service", redirectServices)
 		return
 	}
+
+	actorID, _ := utils.ExtractAdminID(ctx)
+	desc := "Deleted service ID: " + id.String()
+	if svc != nil {
+		desc = fmt.Sprintf("Deleted service: %s (%s)", svc.Name, svc.Code)
+	}
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionDeleteService, id.String(), desc, ctx.ClientIP())
 
 	setFlashSuccess(ctx, "Service deleted successfully", redirectServices)
 }

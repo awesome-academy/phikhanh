@@ -72,13 +72,3 @@ type ActivityLogItem struct {
 	Status    string
 	Timestamp string
 }
-
-// ActivityLogListResult - Kết quả phân trang
-type ActivityLogListResult struct {
-	Items       []ActivityLogItem
-	CurrentPage int
-	TotalPages  int
-	TotalItems  int64
-	HasPrev     bool
-	HasNext     bool
-}
