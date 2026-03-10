@@ -72,13 +72,8 @@ func (c *DepartmentController) CreateSave(ctx *gin.Context) {
 	}
 
 	actorID, _ := utils.ExtractAdminID(ctx)
-	c.activityLogSvc.RecordActivity(
-		actorID.String(),
-		models.ActionCreateDept,
-		department.ID.String(),
-		fmt.Sprintf("Created department: %s (%s)", department.Name, department.Code),
-		ctx.ClientIP(),
-	)
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionCreateDept, department.ID.String(),
+		fmt.Sprintf("Created department: %s (%s)", department.Name, department.Code), ctx.ClientIP())
 
 	setFlashSuccess(ctx, "Department created successfully", redirectDepartments)
 }
@@ -117,13 +112,8 @@ func (c *DepartmentController) EditSave(ctx *gin.Context) {
 	}
 
 	actorID, _ := utils.ExtractAdminID(ctx)
-	c.activityLogSvc.RecordActivity(
-		actorID.String(),
-		models.ActionUpdateDept,
-		id.String(),
-		fmt.Sprintf("Updated department: %s (%s)", updated.Name, updated.Code),
-		ctx.ClientIP(),
-	)
+	c.activityLogSvc.RecordActivity(actorID.String(), models.ActionUpdateDept, id.String(),
+		fmt.Sprintf("Updated department: %s (%s)", updated.Name, updated.Code), ctx.ClientIP())
 
 	setFlashSuccess(ctx, "Department updated successfully", redirectDepartments)
 }
@@ -158,8 +148,10 @@ func (c *DepartmentController) renderForm(ctx *gin.Context, title string, depart
 }
 
 func (c *DepartmentController) formData(ctx *gin.Context, title string, department *models.Department, action, label, errMsg string) gin.H {
+	managers, _ := c.service.GetAvailableManagers()
 	data := utils.GetAdminData(ctx, title, "departments")
 	data["Department"] = department
+	data["Managers"] = managers
 	data["FormAction"] = action
 	data["SubmitLabel"] = label
 	data["Error"] = errMsg

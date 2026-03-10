@@ -10,3 +10,9 @@ type DepartmentDetail struct {
 	CreatedAt  string
 	UpdatedAt  string
 }
+
+// ManagerOption - DTO chi tiết manager cho SSR
+type ManagerOption struct {
+	ID   string
+	Name string
+}
