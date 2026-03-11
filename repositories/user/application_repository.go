@@ -93,3 +93,58 @@ func (r *ApplicationRepository) FindMyApplications(
 
 	return applications, total, nil
 }
+
+// SupplementApplication - Transaction: insert attachments + update status + insert history
+func (r *ApplicationRepository) SupplementApplication(
+	appID string,
+	userID string,
+	newAttachments []models.Attachment,
+	history *models.ApplicationHistory,
+) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Insert new supplement attachments
+		if len(newAttachments) > 0 {
+			if err := tx.Create(&newAttachments).Error; err != nil {
+				return err
+			}
+		}
+
+		// Update application status back to Processing
+		result := tx.Model(&models.Application{}).
+			Where("id = ?", appID).
+			Update("status", models.StatusProcessing)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+
+		// Insert history record
+		if err := tx.Create(history).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// FindByID - Preload User và AssignedStaff để service có đủ data gửi email
+func (r *ApplicationRepository) FindByID(id string) (*models.Application, error) {
+	var app models.Application
+	if err := r.db.Preload("User").
+		Preload("Service").
+		First(&app, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &app, nil
+}
+
+// FindUserByID - Lấy user info theo ID (dùng để fetch staff info)
+func (r *ApplicationRepository) FindUserByID(userID string) (*models.User, error) {
+	var user models.User
+	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

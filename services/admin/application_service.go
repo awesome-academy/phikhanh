@@ -7,6 +7,7 @@ import (
 	adminDto "phikhanh/dto/admin"
 	"phikhanh/models"
 	adminRepo "phikhanh/repositories/admin"
+	"phikhanh/services"
 	"phikhanh/utils"
 	"time"
 
@@ -18,14 +19,15 @@ const (
 )
 
 type ApplicationAdminService struct {
-	repo         *adminRepo.ApplicationRepository
-	emailService *utils.EmailService
+	repo                *adminRepo.ApplicationRepository
+	notificationService *services.NotificationService
+	// emailService đã bị xóa: email được gửi qua notificationService.NotifyUser
 }
 
-func NewApplicationAdminService(repo *adminRepo.ApplicationRepository) *ApplicationAdminService {
+func NewApplicationAdminService(repo *adminRepo.ApplicationRepository, notifService *services.NotificationService) *ApplicationAdminService {
 	return &ApplicationAdminService{
-		repo:         repo,
-		emailService: utils.NewEmailService(),
+		repo:                repo,
+		notificationService: notifService,
 	}
 }
 
@@ -238,9 +240,11 @@ func (s *ApplicationAdminService) ProcessApplication(appID string, newStatus str
 		return utils.NewInternalServerError(err)
 	}
 
-	// Trigger async email notification
-	if newStatus == string(models.StatusApproved) || newStatus == string(models.StatusSupplementRequired) {
-		go s.sendStatusUpdateEmailAsync(app, newStatus, note)
+	// Notify citizen async:
+	// - Luôn tạo in-app notification
+	// - Gửi email nếu user.IsEmailNotify = true (handled bên trong NotifyUser)
+	if app.User != nil {
+		go s.notifyCitizenOnStatusChange(app, newStatus, note)
 	}
 
 	return nil
@@ -256,46 +260,9 @@ func (s *ApplicationAdminService) isAllowedTransition(newStatus string, allowedS
 	return false
 }
 
-// sendStatusUpdateEmailAsync - Gửi email thông báo status thay đổi (async goroutine)
-// Không block main flow, có error handling và panic recovery
-func (s *ApplicationAdminService) sendStatusUpdateEmailAsync(app *models.Application, newStatus string, note string) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("[Email Async] Panic recovered: %v", r)
-		}
-	}()
-
-	log.Printf("[Email Async] Starting to send email for application %s (status: %s)", app.Code, newStatus)
-
-	// Validate user và email
-	if app.User == nil {
-		log.Printf("[Email Async] Cannot send email: user not found for application %s", app.Code)
-		return
-	}
-
-	if app.User.Email == "" {
-		log.Printf("[Email Async] Cannot send email: email missing for user %s (application %s)", app.User.ID, app.Code)
-		return
-	}
-
-	// Gửi email
-	err := s.emailService.SendApplicationStatusEmail(
-		app.User.Email,
-		app.User.Name,
-		app.Code,
-		newStatus,
-		note,
-	)
-
-	if err != nil {
-		// Report error centrally
-		errorHandler := utils.GetEmailErrorHandler()
-		errorHandler.ReportError(app.Code, app.User.Email, err)
-		return
-	}
-
-	log.Printf("[Email Async] ✓ Email sent successfully for application %s", app.Code)
-}
+// sendStatusUpdateEmailAsync - DEPRECATED: đã được thay bởi notifyCitizenOnStatusChange + NotifyUser
+// Giữ lại để tham khảo, không gọi nữa
+// func (s *ApplicationAdminService) sendStatusUpdateEmailAsync(...) { ... }
 
 // BuildHistoryDescription - Xây dựng mô tả chi tiết cho history record
 // Format: "Status changed from Received to Processing and assigned to Nguyen Van A. Note: ..."
@@ -311,4 +278,27 @@ func (s *ApplicationAdminService) BuildHistoryDescription(oldStatus string, newS
 	}
 
 	return desc
+}
+
+// notifyCitizenOnStatusChange - Delegate toàn bộ notification + email logic cho NotificationService
+// NotificationService.NotifyUser sẽ:
+//   - Step 1: Insert in-app notification
+//   - Step 2: Fetch user.IsEmailNotify
+//   - Step 3: Gửi email async nếu IsEmailNotify = true
+func (s *ApplicationAdminService) notifyCitizenOnStatusChange(app *models.Application, newStatus, note string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[Notification] Panic recovered: %v", r)
+		}
+	}()
+
+	title := fmt.Sprintf("Hồ sơ %s - Trạng thái: %s", app.Code, newStatus)
+	content := fmt.Sprintf("Hồ sơ của bạn đã được cập nhật sang trạng thái: %s", newStatus)
+	if note != "" {
+		content += fmt.Sprintf("\nGhi chú từ cán bộ: %s", note)
+	}
+
+	if err := s.notificationService.NotifyUser(app.UserID, title, content); err != nil {
+		log.Printf("[Notification] Failed to notify citizen %s for app %s: %v", app.UserID, app.Code, err)
+	}
 }

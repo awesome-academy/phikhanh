@@ -3,10 +3,21 @@
 <div class="space-y-4">
     <div class="flex justify-between items-center">
         <p class="text-gray-600 text-sm">Total: {{ len .Departments }} departments</p>
-        <a href="/admin/departments/create"
-           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
-            + Add New Department
-        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Departments Management</h1>
+        <div class="flex gap-2">
+            <a href="/admin/export/departments"
+               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition">
+                ↓ Export CSV
+            </a>
+            <a href="/admin/departments/create"
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                + Create Department
+            </a>
+        </div>
     </div>
 
     {{ if .Success }}

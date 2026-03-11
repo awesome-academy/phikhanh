@@ -4,7 +4,9 @@ import (
 	"phikhanh/config"
 	userCtrl "phikhanh/controllers/user"
 	"phikhanh/middlewares"
+	"phikhanh/repositories"
 	userRepo "phikhanh/repositories/user"
+	"phikhanh/services"
 	userSvc "phikhanh/services/user"
 
 	"github.com/gin-gonic/gin"
@@ -16,21 +18,23 @@ const maxUploadBodySize = int64(11 << 20) // 11MB
 
 // Thiết lập routes cho User API (JSON)
 func SetupUserRoutes(router *gin.Engine) {
+	db := config.GetDB()
+
 	// Health check
 	healthController := userCtrl.NewHealthController()
 
 	// Auth
-	authRepo := userRepo.NewAuthRepository(config.GetDB())
+	authRepo := userRepo.NewAuthRepository(db)
 	authService := userSvc.NewAuthService(authRepo)
 	authController := userCtrl.NewAuthController(authService)
 
 	// Profile
-	profileRepo := userRepo.NewProfileRepository(config.GetDB())
+	profileRepo := userRepo.NewProfileRepository(db)
 	profileService := userSvc.NewProfileService(profileRepo)
 	profileController := userCtrl.NewProfileController(profileService)
 
 	// Service
-	serviceRepo := userRepo.NewServiceRepository(config.GetDB())
+	serviceRepo := userRepo.NewServiceRepository(db)
 	serviceService := userSvc.NewServiceService(serviceRepo)
 	serviceController := userCtrl.NewServiceController(serviceService)
 
@@ -38,9 +42,14 @@ func SetupUserRoutes(router *gin.Engine) {
 	uploadController := userCtrl.NewUploadController()
 
 	// Application
-	appRepo := userRepo.NewApplicationRepository(config.GetDB())
+	appRepo := userRepo.NewApplicationRepository(db)
 	appService := userSvc.NewApplicationService(appRepo)
 	appController := userCtrl.NewApplicationController(appService)
+
+	// Notifications
+	notifRepo := repositories.NewNotificationRepository(db)
+	notifService := services.NewNotificationService(notifRepo)
+	notifController := userCtrl.NewNotificationController(notifService)
 
 	// Swagger documentation
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -86,6 +95,16 @@ func SetupUserRoutes(router *gin.Engine) {
 		{
 			applications.POST("", appController.SubmitApplication)
 			applications.GET("/me", appController.GetMyApplications)
+			applications.POST("/:id/supplement", appController.SupplementApplication)
+		}
+
+		// Notifications routes (protected)
+		notifications := api.Group("/notifications")
+		notifications.Use(middlewares.AuthMiddleware())
+		{
+			notifications.GET("", notifController.GetNotifications)
+			notifications.PATCH("/read-all", notifController.MarkAllAsRead)
+			notifications.PATCH("/:id/read", notifController.MarkAsRead)
 		}
 	}
 }

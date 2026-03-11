@@ -23,10 +23,10 @@ const (
 // Model đại diện cho bảng users
 type User struct {
 	BaseModel
-	CitizenID     string     `gorm:"uniqueIndex:idx_users_citizen_id;not null" json:"citizen_id"`
+	CitizenID     string     `gorm:"not null" json:"citizen_id"`
 	PasswordHash  string     `gorm:"not null" json:"-"`
 	Name          string     `gorm:"not null" json:"name"`
-	Email         string     `gorm:"uniqueIndex:idx_users_email;not null" json:"email"`
+	Email         string     `gorm:"not null" json:"email"`
 	Phone         string     `json:"phone"`
 	Address       string     `json:"address"`
 	DateOfBirth   *time.Time `json:"date_of_birth"`

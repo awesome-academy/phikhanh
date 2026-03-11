@@ -2,12 +2,18 @@
 {{ define "content" }}
 <div class="space-y-4">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-        <p class="text-gray-600 text-sm">Total: {{ len .Services }} services</p>
-        <a href="/admin/services/create"
-           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
-            + Add New Service
-        </a>
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Services Management</h1>
+        <div class="flex gap-2">
+            <a href="/admin/export/services"
+               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition">
+                ↓ Export CSV
+            </a>
+            <a href="/admin/services/create"
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                + Create Service
+            </a>
+        </div>
     </div>
 
     <!-- Flash Message -->

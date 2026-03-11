@@ -252,6 +252,28 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
     type: object
+  user.SupplementAttachment:
+    properties:
+      file_name:
+        type: string
+      file_path:
+        type: string
+    required:
+    - file_name
+    - file_path
+    type: object
+  user.SupplementRequest:
+    properties:
+      attachments:
+        items:
+          $ref: '#/definitions/user.SupplementAttachment'
+        minItems: 1
+        type: array
+      note:
+        type: string
+    required:
+    - attachments
+    type: object
   user.UpdateProfileRequest:
     properties:
       address:
@@ -394,6 +416,47 @@ paths:
       summary: Nộp hồ sơ
       tags:
       - Applications
+  /applications/{id}/supplement:
+    post:
+      consumes:
+      - application/json
+      description: Citizen nộp tài liệu bổ sung khi application ở trạng thái Supplement_Required
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Supplement documents
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.SupplementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Nộp bổ sung hồ sơ
+      tags:
+      - Applications
   /applications/me:
     get:
       consumes:
@@ -532,6 +595,54 @@ paths:
       summary: Đăng ký tài khoản
       tags:
       - Auth
+  /notifications:
+    get:
+      parameters:
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Danh sách thông báo
+      tags:
+      - Notifications
+  /notifications/{id}/read:
+    patch:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Đánh dấu đã đọc
+      tags:
+      - Notifications
+  /notifications/read-all:
+    patch:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Đánh dấu tất cả đã đọc
+      tags:
+      - Notifications
   /profile:
     get:
       consumes:

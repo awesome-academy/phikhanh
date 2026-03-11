@@ -4,7 +4,9 @@ import (
 	"phikhanh/config"
 	"phikhanh/controllers/admin"
 	"phikhanh/middlewares"
+	"phikhanh/repositories"
 	adminRepo "phikhanh/repositories/admin"
+	"phikhanh/services"
 	adminSvc "phikhanh/services/admin"
 
 	"github.com/gin-gonic/gin"
@@ -33,9 +35,11 @@ func SetupAdminRoutes(router *gin.Engine) {
 	deptService := adminSvc.NewDepartmentService(deptRepo)
 	departmentController := admin.NewDepartmentController(deptService, activityLogService)
 
-	// Applications
+	notifRepo := repositories.NewNotificationRepository(db)
+	notifService := services.NewNotificationService(notifRepo)
+
 	appRepo := adminRepo.NewApplicationRepository(db)
-	appService := adminSvc.NewApplicationAdminService(appRepo)
+	appService := adminSvc.NewApplicationAdminService(appRepo, notifService)
 	applicationController := admin.NewApplicationController(appService, activityLogService)
 
 	// Users
@@ -45,6 +49,11 @@ func SetupAdminRoutes(router *gin.Engine) {
 
 	// Dashboard
 	dashboardController := admin.NewDashboardController(appService, svcService, deptService)
+
+	// Export
+	exportRepo := adminRepo.NewExportRepository(db)
+	exportService := adminSvc.NewExportService(exportRepo)
+	exportController := admin.NewExportController(exportService)
 
 	adminGroup := router.Group("/admin")
 	{
@@ -69,6 +78,7 @@ func SetupAdminRoutes(router *gin.Engine) {
 			services.Use(middlewares.RequireRole("admin", "manager"))
 			{
 				services.GET("", serviceController.List)
+				services.GET("/:id", serviceController.Detail)
 				services.GET("/create", serviceController.CreateForm)
 				services.POST("/create", serviceController.CreateSave)
 				services.GET("/:id/edit", serviceController.EditForm)
@@ -105,6 +115,17 @@ func SetupAdminRoutes(router *gin.Engine) {
 			{
 				activityLogs.GET("", activityLogCtrl.List)
 				activityLogs.POST("/cleanup", activityLogCtrl.Cleanup)
+			}
+
+			// Export - Admin & Manager only
+			exports := protected.Group("/export")
+			exports.Use(middlewares.RequireRole("admin", "manager"))
+			{
+				exports.GET("/citizens", exportController.ExportCitizens)
+				exports.GET("/applications", exportController.ExportApplications)
+				exports.GET("/services", exportController.ExportServices)
+				exports.GET("/departments", exportController.ExportDepartments)
+				exports.GET("/staffs", exportController.ExportStaff)
 			}
 		}
 	}

@@ -109,3 +109,45 @@ func (c *ApplicationController) GetMyApplications(ctx *gin.Context) {
 
 	utils.SuccessResponse(ctx, http.StatusOK, "Get my applications successful", response)
 }
+
+// SupplementApplication godoc
+// @Summary      Nộp bổ sung hồ sơ
+// @Description  Citizen nộp tài liệu bổ sung khi application ở trạng thái Supplement_Required
+// @Tags         Applications
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path      string                    true  "Application ID"
+// @Param        request body      userDto.SupplementRequest true  "Supplement documents"
+// @Success      200     {object}  utils.APIResponse
+// @Failure      400     {object}  utils.APIResponse
+// @Failure      403     {object}  utils.APIResponse
+// @Failure      404     {object}  utils.APIResponse
+// @Router       /applications/{id}/supplement [post]
+func (c *ApplicationController) SupplementApplication(ctx *gin.Context) {
+	appID := ctx.Param("id")
+
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(ctx, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	userIDStr, _ := userID.(string)
+
+	var req userDto.SupplementRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(ctx, utils.FormatValidationErrorsMap(err))
+		return
+	}
+
+	if err := c.service.SupplementApplication(appID, userIDStr, req); err != nil {
+		if svcErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorResponse(ctx, svcErr.StatusCode, svcErr.Message)
+			return
+		}
+		utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to submit supplementary documents")
+		return
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "Supplementary documents submitted successfully", nil)
+}

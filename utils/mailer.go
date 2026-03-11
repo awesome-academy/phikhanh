@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // EmailService - Struct chứa SMTP configuration
@@ -37,6 +38,15 @@ type WelcomeEmailData struct {
 	Email     string
 	Password  string
 	Role      string
+}
+
+// SupplementNotificationData - Data cho staff notification email
+type SupplementNotificationData struct {
+	StaffName       string
+	ApplicationCode string
+	CitizenName     string
+	CitizenNote     string
+	SubmittedAt     string
 }
 
 // NewEmailService - Tạo instance EmailService từ env variables
@@ -299,4 +309,151 @@ func (es *EmailService) sendWelcomeEmailTo(toEmail, name, citizenID, role, rawPa
 
 	log.Printf("[Email Service] ✓ Welcome email sent to %s", toEmail)
 	return nil
+}
+
+// SendSupplementNotificationToStaff - Gửi email thông báo staff khi citizen nộp bổ sung
+func (es *EmailService) SendSupplementNotificationToStaff(
+	toEmail, staffName, appCode, citizenName, citizenNote string,
+) error {
+	if !es.IsConfigured() {
+		log.Printf("[Email Service] Skipping supplement notification (SMTP not configured): to=%s", toEmail)
+		return nil
+	}
+
+	if toEmail == "" {
+		return NewBadRequestError("Staff email is empty")
+	}
+
+	data := SupplementNotificationData{
+		StaffName:       staffName,
+		ApplicationCode: appCode,
+		CitizenName:     citizenName,
+		CitizenNote:     citizenNote,
+		SubmittedAt:     time.Now().Format("02/01/2006 15:04"),
+	}
+
+	tmpl, err := template.ParseFiles("templates/email/supplement_notification.html")
+	if err != nil {
+		log.Printf("[Email Service] Failed to parse supplement_notification template: %v", err)
+		return NewInternalServerError(err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		log.Printf("[Email Service] Failed to execute supplement_notification template: %v", err)
+		return NewInternalServerError(err)
+	}
+
+	subject := fmt.Sprintf("[Thông báo] Công dân đã nộp bổ sung hồ sơ %s", appCode)
+	fromHeader := es.formatFromHeader()
+	message := "From: " + fromHeader + "\r\n" +
+		"To: " + toEmail + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
+		"\r\n" +
+		buf.String()
+
+	addr := es.Host + ":" + strconv.Itoa(es.Port)
+	var auth smtp.Auth
+	if es.Username != "" && es.Password != "" {
+		auth = smtp.PlainAuth("", es.Username, es.Password, es.Host)
+	}
+
+	if err := smtp.SendMail(addr, auth, es.FromAddr, []string{toEmail}, []byte(message)); err != nil {
+		log.Printf("[Email Service] Failed to send supplement notification to %s: %v", toEmail, err)
+		return NewInternalServerError(err)
+	}
+
+	log.Printf("[Email Service] ✓ Supplement notification sent to staff %s", toEmail)
+	return nil
+}
+
+// SendNotificationEmail - Gửi email thông báo in-app notification (khi IsEmailNotify=true)
+func (es *EmailService) SendNotificationEmail(toEmail, userName, title, content string) error {
+	if !es.IsConfigured() {
+		log.Printf("[Email Service] Skipping notification email (SMTP not configured): to=%s", toEmail)
+		return nil
+	}
+
+	if toEmail == "" {
+		return NewBadRequestError("Recipient email address is empty")
+	}
+
+	// Extract fields từ title/content rồi delegate cho SendApplicationStatusEmail
+	// SendApplicationStatusEmail sẽ lo validate, render template, send
+	appCode := extractAppCode(title)
+	status := extractStatusText(title) // đã được convert sang display text bởi getStatusDisplayText
+	note := extractNote(content)
+
+	return es.SendApplicationStatusEmail(toEmail, userName, appCode, status, note)
+}
+
+// extractAppCode - Extract app code từ notification title
+// "Hồ sơ HS-20240101-abc - Trạng thái: Processing" → "HS-20240101-abc"
+func extractAppCode(title string) string {
+	const prefix = "Hồ sơ "
+	const sep = " - "
+	if idx := strings.Index(title, prefix); idx != -1 {
+		rest := title[idx+len(prefix):]
+		if end := strings.Index(rest, sep); end != -1 {
+			return rest[:end]
+		}
+	}
+	return ""
+}
+
+// extractStatusText - Extract và convert status từ notification title
+// "Hồ sơ HS-xxx - Trạng thái: Processing" → "Đang xử lý"
+func extractStatusText(title string) string {
+	const marker = "Trạng thái: "
+	if idx := strings.Index(title, marker); idx != -1 {
+		rawStatus := title[idx+len(marker):]
+		return getStatusDisplayText(rawStatus)
+	}
+	return title
+}
+
+// extractNote - Extract note từ notification content
+// "Hồ sơ của bạn...\nGhi chú từ cán bộ: some note" → "some note"
+func extractNote(content string) string {
+	const marker = "Ghi chú từ cán bộ: "
+	if idx := strings.Index(content, marker); idx != -1 {
+		return content[idx+len(marker):]
+	}
+	return ""
+}
+
+// sendHTML - Helper gửi HTML email
+func (es *EmailService) sendHTML(toEmail, subject, htmlBody string) error {
+	fromHeader := es.formatFromHeader()
+	message := "From: " + fromHeader + "\r\n" +
+		"To: " + toEmail + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
+		"\r\n" + htmlBody
+
+	addr := es.Host + ":" + strconv.Itoa(es.Port)
+	var auth smtp.Auth
+	if es.Username != "" && es.Password != "" {
+		auth = smtp.PlainAuth("", es.Username, es.Password, es.Host)
+	}
+	return smtp.SendMail(addr, auth, es.FromAddr, []string{toEmail}, []byte(message))
+}
+
+// sendPlain - Helper gửi plain text email
+func (es *EmailService) sendPlain(toEmail, subject, body string) error {
+	fromHeader := es.formatFromHeader()
+	message := "From: " + fromHeader + "\r\n" +
+		"To: " + toEmail + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" + body
+
+	addr := es.Host + ":" + strconv.Itoa(es.Port)
+	var auth smtp.Auth
+	if es.Username != "" && es.Password != "" {
+		auth = smtp.PlainAuth("", es.Username, es.Password, es.Host)
+	}
+	return smtp.SendMail(addr, auth, es.FromAddr, []string{toEmail}, []byte(message))
 }

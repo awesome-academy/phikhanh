@@ -13,11 +13,15 @@ import (
 )
 
 type AuthService struct {
-	repo *userRepo.AuthRepository
+	repo         *userRepo.AuthRepository
+	emailService *utils.EmailService
 }
 
 func NewAuthService(repo *userRepo.AuthRepository) *AuthService {
-	return &AuthService{repo: repo}
+	return &AuthService{
+		repo:         repo,
+		emailService: utils.NewEmailService(),
+	}
 }
 
 // Đăng ký tài khoản mới
@@ -73,7 +77,19 @@ func (s *AuthService) Register(citizenID, password, name, email, phone, address,
 		return nil, utils.NewInternalServerError(err)
 	}
 
+	// Send welcome email async
+	go s.sendWelcomeEmailAsync(user, password)
+
 	return user, nil
+}
+
+// sendWelcomeEmailAsync - Gửi welcome email sau khi citizen đăng ký
+func (s *AuthService) sendWelcomeEmailAsync(user *models.User, rawPassword string) {
+	if user.Email == "" {
+		return
+	}
+
+	_ = s.emailService.SendWelcomeEmail(user, rawPassword)
 }
 
 // Login - Đăng nhập bằng CitizenID hoặc Email

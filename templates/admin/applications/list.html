@@ -15,6 +15,15 @@
     </div>
     {{ end }}
 
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Applications</h1>
+        <a href="/admin/export/applications"
+           class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition">
+            ↓ Export CSV
+        </a>
+    </div>
+
     <!-- Filter -->
     <form method="GET" action="/admin/applications" class="flex items-center gap-3">
         <select name="status"
