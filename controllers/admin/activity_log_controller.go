@@ -44,8 +44,8 @@ func (c *ActivityLogController) List(ctx *gin.Context) {
 
 // POST /admin/activity-logs/cleanup
 func (c *ActivityLogController) Cleanup(ctx *gin.Context) {
-	days, _ := strconv.Atoi(ctx.PostForm("days"))
-	if days <= 0 {
+	days, err := strconv.Atoi(ctx.PostForm("days"))
+	if err != nil || days <= 0 {
 		days = 30
 	}
 

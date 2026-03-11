@@ -61,3 +61,12 @@ func (c *Config) GetDSN() string {
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName, c.DBSSLMode,
 	)
 }
+
+// GetMigrationDSN - Build DSN URL format cho golang-migrate
+// Format: postgresql://user:password@host:port/dbname?sslmode=disable
+func (c *Config) GetMigrationDSN() string {
+	return fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
+		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode,
+	)
+}

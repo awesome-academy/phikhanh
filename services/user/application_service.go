@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -11,14 +12,19 @@ import (
 	"phikhanh/utils"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ApplicationService struct {
-	repo *userRepo.ApplicationRepository
+	repo         *userRepo.ApplicationRepository
+	emailService *utils.EmailService
 }
 
 func NewApplicationService(repo *userRepo.ApplicationRepository) *ApplicationService {
-	return &ApplicationService{repo: repo}
+	return &ApplicationService{
+		repo:         repo,
+		emailService: utils.NewEmailService(),
+	}
 }
 
 // SubmitApplication - Xử lý business logic nộp hồ sơ
@@ -56,11 +62,11 @@ func (s *ApplicationService) SubmitApplication(req userDto.SubmitAppRequest, use
 		attachments = append(attachments, models.Attachment{
 			FileName: a.FileName,
 			FilePath: a.FilePath,
-			Type:     models.AttachmentTypeRequest,
+			Type:     string(models.AttachmentTypeOriginal),
 		})
 	}
 
-	// Tạo history record
+	// Tạo history record - ActorID là uuid.UUID (không phải pointer)
 	history := &models.ApplicationHistory{
 		ActorID: userID,
 		Action:  "SUBMITTED",
@@ -127,4 +133,107 @@ func (s *ApplicationService) GetMyApplications(req userDto.MyAppListRequest, use
 		TotalItems: total,
 		TotalPages: totalPages,
 	}, nil
+}
+
+// SupplementApplication - Validate + orchestrate supplement submission
+func (s *ApplicationService) SupplementApplication(appID, userID string, req userDto.SupplementRequest) error {
+	app, err := s.repo.FindByID(appID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.NewNotFoundError("Application not found")
+		}
+		return utils.NewInternalServerError(err)
+	}
+
+	if app.UserID.String() != userID {
+		return utils.NewForbiddenError("Access denied: this application does not belong to you")
+	}
+
+	if app.Status != models.StatusSupplementRequired {
+		return utils.NewBadRequestError("Application is not in a state that requires supplementation")
+	}
+
+	actorID, err := uuid.Parse(userID)
+	if err != nil {
+		return utils.NewBadRequestError("Invalid user ID")
+	}
+
+	appUUID, err := uuid.Parse(appID)
+	if err != nil {
+		return utils.NewBadRequestError("Invalid application ID")
+	}
+
+	attachments := make([]models.Attachment, 0, len(req.Attachments))
+	for _, a := range req.Attachments {
+		attachments = append(attachments, models.Attachment{
+			ApplicationID: appUUID,
+			FilePath:      a.FilePath,
+			FileName:      a.FileName,
+			Type:          string(models.AttachmentTypeSupplement),
+		})
+	}
+
+	history := &models.ApplicationHistory{
+		ApplicationID: appUUID,
+		ActorID:       actorID,
+		Action:        "SUPPLEMENTED",
+		Note:          req.Note,
+	}
+
+	if err := s.repo.SupplementApplication(appID, userID, attachments, history); err != nil {
+		return utils.NewInternalServerError(err)
+	}
+
+	// Notify assigned staff async
+	go s.notifyStaffOnSupplementAsync(app, req.Note)
+
+	return nil
+}
+
+// notifyStaffOnSupplementAsync - Gửi email thông báo cho staff khi citizen nộp bổ sung
+func (s *ApplicationService) notifyStaffOnSupplementAsync(app *models.Application, citizenNote string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[Supplement Email] Panic recovered: %v", r)
+		}
+	}()
+
+	// Chỉ gửi nếu application có assigned staff
+	if app.AssignedStaffID == nil {
+		log.Printf("[Supplement Email] Skipping: no assigned staff for application %s", app.Code)
+		return
+	}
+
+	// Fetch staff info
+	staff, err := s.repo.FindUserByID(app.AssignedStaffID.String())
+	if err != nil || staff == nil {
+		log.Printf("[Supplement Email] Skipping: staff not found for application %s", app.Code)
+		return
+	}
+
+	if staff.Email == "" {
+		log.Printf("[Supplement Email] Skipping: staff email empty for application %s", app.Code)
+		return
+	}
+
+	// Fetch citizen info
+	citizenName := "Citizen"
+	if app.User != nil {
+		citizenName = app.User.Name
+	}
+
+	err = s.emailService.SendSupplementNotificationToStaff(
+		staff.Email,
+		staff.Name,
+		app.Code,
+		citizenName,
+		citizenNote,
+	)
+	if err != nil {
+		errorHandler := utils.GetEmailErrorHandler()
+		errorHandler.ReportError(app.Code, staff.Email, err)
+		return
+	}
+
+	log.Printf("[Supplement Email] ✓ Notified staff %s for application %s", staff.Email, app.Code)
 }

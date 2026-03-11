@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"phikhanh/config"
+	"phikhanh/database"
 	"phikhanh/middlewares"
 	"phikhanh/routes"
 	"phikhanh/utils"
@@ -41,6 +42,10 @@ func main() {
 
 	// Chạy migration
 	config.RunMigrations()
+
+	// Step 2: chạy versioned SQL migrations
+	dbSource := config.AppConfig.GetMigrationDSN()
+	database.RunDBMigration(dbSource)
 
 	// Đăng ký custom validators
 	utils.RegisterCustomValidators()

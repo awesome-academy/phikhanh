@@ -35,6 +35,26 @@ func (c *ServiceController) List(ctx *gin.Context) {
 	utils.RenderHTML(ctx, http.StatusOK, "admin/services/list.html", data)
 }
 
+// GET /admin/services/:id - Hiển thị chi tiết service
+func (c *ServiceController) Detail(ctx *gin.Context) {
+	id, ok := parseServiceID(ctx)
+	if !ok {
+		return
+	}
+
+	detail, err := c.service.GetDetail(id)
+	if err != nil {
+		setFlashError(ctx, "Service not found", redirectServices)
+		return
+	}
+
+	data := utils.GetAdminData(ctx, "Service Detail", "services")
+	data["Service"] = detail
+	data["CsrfToken"] = getCsrfToken(ctx)
+
+	utils.RenderHTML(ctx, http.StatusOK, "admin/services/detail.html", data)
+}
+
 // GET /admin/services/create
 func (c *ServiceController) CreateForm(ctx *gin.Context) {
 	c.renderForm(ctx, "Add New Service", &models.Service{}, "/admin/services/create", "Create Service", "")

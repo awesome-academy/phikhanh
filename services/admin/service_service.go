@@ -17,8 +17,14 @@ import (
 
 // AvailableSectors - Danh sách sectors hợp lệ
 var AvailableSectors = []string{
-	"Health", "Land", "Construction", "Education",
-	"Finance", "Transportation", "Agriculture", "Other",
+	"Y tế",
+	"Đất đai",
+	"Xây dựng",
+	"Giáo dục",
+	"Tài chính",
+	"Giao thông vận tải",
+	"Nông nghiệp",
+	"Khác",
 }
 
 // svcCodePattern - Chỉ cho phép đúng 3 chữ số sau "SV-"
